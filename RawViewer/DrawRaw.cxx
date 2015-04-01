@@ -85,13 +85,33 @@ namespace larlite {
 
   const std::vector<std::vector<float>> & DrawRaw::getDataByPlane(unsigned int p) const{
     static std::vector<std::vector<float>> returnNull;
-    if (p >= geoService->Nplanes()){
+    if (p >= geoService->Nplanes() || p < 0){
       std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
       return returnNull;
     }
     else{
       if (wiredata !=0){
         return wiredata->at(p);
+      }
+      else{
+        return returnNull;
+      }
+    }
+    
+  }
+
+  const std::vector<float> & DrawRaw::getWireData(unsigned int plane, unsigned int wire) const{
+    static std::vector<float> returnNull;
+    if (plane >= geoService->Nplanes() || plane < 0){
+      std::cerr << "ERROR: Request for nonexistant plane " << plane << std::endl;
+      return returnNull;
+    }
+    if (wire >= geoService->Nwires(plane) || wire < 0){
+        std::cerr << "ERROR: Request for nonexistant wire " << wire << std::endl;
+    }
+    else{
+      if (wiredata !=0){
+        return wiredata->at(plane).at(wire);
       }
       else{
         return returnNull;

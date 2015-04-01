@@ -52,3 +52,9 @@ class RawData():
     for i in range(0,self.nplanes):
       d.append(np.array(self.c2p.Convert(self.my_proc.get_process(0).getDataByPlane(i))) )
     return d
+
+  def get_wire(self, plane, wire):
+    if plane > self.nplanes:
+      return
+    if wire > 0 and wire < 240:
+      return np.array(self.c2p.Convert(self.my_proc.get_process(0).getWireData(plane,wire)))

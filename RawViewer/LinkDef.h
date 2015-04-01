@@ -11,7 +11,6 @@
 
 #pragma link C++ class sample+;
 #pragma link C++ class larlite::DrawRaw+;
-#pragma link C++ class larlite::DrawWire+;
 #pragma link C++ class larlite::Converter+;
 //ADD_NEW_CLASS ... do not change this line
 #endif
