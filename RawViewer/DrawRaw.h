@@ -51,6 +51,8 @@ namespace larlite {
     // Function to get the data by plane:
     const std::vector<std::vector<float>> & getDataByPlane(unsigned int p) const;
 
+    const std::vector<float> & getWireData(unsigned int plane, unsigned int wire) const;
+
   protected:
     
     //vector of [tpc][wire][time]

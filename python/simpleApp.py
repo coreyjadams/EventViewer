@@ -56,8 +56,13 @@ class Example(QtGui.QWidget):
         grid.addWidget(_emptySpace2,2,1)
 
         r = rd.RawData()
+        r.config_argo()
+        r.init_proc()
         r.add_input_file("/media/cadams/data_linux/argoneut_mc/nue_larlite_all.root")
         d = r.get_img()
+
+        print type(d[0])
+        print len(d[0])
 
         _item1.setImage(d[0].T)
         _item2.setImage(d[1].T)
