@@ -90,8 +90,8 @@ class evd(QtGui.QWidget):
 
         # ColorMap used to color data:
         self._cmap = pg.GradientWidget(orientation='left')
-        colorMapDefault = {'ticks': [(0, (30, 30, 255, 255)), (0.33333, (0, 255, 255, 255)), (0.66666, (255,255,100,255)), (1, (255, 0, 0, 255))], 'mode': 'rgb'}
-        self._cmap.restoreState(colorMapDefault)
+        colorMapCollection = {'ticks': [(0, (30, 30, 255, 255)), (0.33333, (0, 255, 255, 255)), (0.66666, (255,255,100,255)), (1, (255, 0, 0, 255))], 'mode': 'rgb'}
+        self._cmap.restoreState(colorMapCollection)
         self._cmap.sigGradientChanged.connect(self.refreshGradient)
 
 
