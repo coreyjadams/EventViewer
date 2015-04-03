@@ -3,7 +3,6 @@
 import sys
 from PyQt4 import QtGui, QtCore
 import pyqtgraph as pg
-# import rawdata as rd
 from dataInterface import *
 
 
@@ -20,6 +19,7 @@ class evd_drawer(pg.GraphicsLayoutWidget):
         # connect the views to mouse move events, used to update the info box at the bottom
         self.scene().sigMouseMoved.connect(self.mouseMoved)
         self._plane = -1
+
 
     def mouseMoved(self, pos):
         self.q = self._item.mapFromScene(pos)
@@ -210,12 +210,7 @@ class evd(QtGui.QWidget):
             # print self._baseData._fileInterface.getListOfKeys()
             # print self._baseData._fileInterface.getListOfKeys()['wire'][0]
             self._baseData.add_drawing_process('wire',self._baseData._fileInterface.getListOfKeys()['wire'][0])
-        # self.r = rd.RawData()
-        # self.r.init_proc()
-        # self.r.add_input_file(self._filePath)
-        # self.r.init_geom()
-        # self.r.config_argo()
-        # d = r.get_img()
+
         
         # TODO
         # Here's how I imagine the workflow:
@@ -234,27 +229,29 @@ class evd(QtGui.QWidget):
       for i in range (0, self._baseData._nviews):
           self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
           self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
-      self.drawWire(1,201)
-      print "Called Draw Raw"
-      pass
+      self.drawWire(1,1)
+
+    def drawBlank(self):
+      d = self._baseData._blankData  
+      for i in range (0, self._baseData._nviews):
+          self._drawerList[i]._item.setImage(d, scale=self._baseData._aspectRatio)
+          # self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
+
 
     def drawWire(self, plane,wire):
       # just testing, draw one wire (plane 0, wire 200)
       wire =self._baseData._daughterProcesses['wire'].get_wire(plane,wire)
       self._wirePlotItem.setData(wire)
-      pass
 
     def updateImage(self):
-        self._baseData.processEvent()
-        if self._drawRawOption.isChecked():
-          self.drawRaw()
+        if self._baseData._hasFile:
+          self._baseData.processEvent()
+          if self._drawRawOption.isChecked():
+            self.drawRaw()
+          else:
+            self.drawBlank()
         else:
-          for i in range (0, self._baseData._nviews):
-            self._drawerList[i]._item.setImage(None, scale=self._baseData._aspectRatio)
-            self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
-      
-
-
+          self.drawBlank()
 
     def nextEvent(self):
       self._baseData._event += 1

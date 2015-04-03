@@ -55,12 +55,11 @@ class baseDataInterface(object):
       self.config_argo()
     self.init_geom()
     self._event = 1
-    # print "Try to initialize ..."
-    # self._process = fmwk.DrawRaw()
-    # self.a = rawDataInterface()
-    # self.b = fmwk.DrawRaw()
-
-
+    self._lastProcessed = 0
+    self._hasFile = False
+    
+    # Generate blank data for the display if there is no raw:
+    self._blankData = np.ones((larutil.Geometry.GetME().Nwires(0),larutil.Geometry.GetME().Nwires(0)/self._aspectRatio))
     self._daughterProcesses = dict()
 
   def init_geom(self):
@@ -111,5 +110,6 @@ class baseDataInterface(object):
 
 
   def processEvent(self):
-    self._my_proc.process_event(self._event)
+    if self._lastProcessed != self._event:
+      self._my_proc.process_event(self._event)
 
