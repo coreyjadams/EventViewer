@@ -1,70 +1,54 @@
 /**
- * \file DrawRaw.h
+ * \file DrawCluster.h
  *
- * \ingroup EventViewer
+ * \ingroup RecoViewer
  * 
- * \brief Class def header for a class DrawRaw
+ * \brief Class def header for a class DrawCluster
  *
  * @author cadams
  */
 
-/** \addtogroup EventViewer
+/** \addtogroup RecoViewer
 
     @{*/
 
-#ifndef LARLITE_DRAWRAW_H
-#define LARLITE_DRAWRAW_H
+#ifndef LARLITE_DRAWCLUSTER_H
+#define LARLITE_DRAWCLUSTER_H
 
 #include "Analysis/ana_base.h"
-#include "LArUtil/Geometry.h"
 
 namespace larlite {
   /**
-     \class DrawRaw
+     \class DrawCluster
      User custom analysis class made by SHELL_USER_NAME
    */
-  class DrawRaw : public ana_base{
+  class DrawCluster : public ana_base{
   
   public:
 
     /// Default constructor
-    DrawRaw(){ _name="DrawRaw"; _fout=0;}
+    DrawCluster(){ _name="DrawCluster"; _fout=0;}
 
     /// Default destructor
-    virtual ~DrawRaw(){}
+    virtual ~DrawCluster(){}
 
-    /** IMPLEMENT in DrawRaw.cc!
+    /** IMPLEMENT in DrawCluster.cc!
         Initialization method to be called before the analysis event loop.
     */ 
     virtual bool initialize();
 
-    /** IMPLEMENT in DrawRaw.cc! 
+    /** IMPLEMENT in DrawCluster.cc! 
         Analyze a data event-by-event  
     */
     virtual bool analyze(storage_manager* storage);
 
-    /** IMPLEMENT in DrawRaw.cc! 
+    /** IMPLEMENT in DrawCluster.cc! 
         Finalize method to be called after all events processed.
     */
     virtual bool finalize();
 
-    void setProducer(std::string s){producer = s;}
-
-    // Function to get the data by plane:
-    const std::vector<std::vector<float>> & getDataByPlane(unsigned int p) const;
-
-    const std::vector<float> & getWireData(unsigned int plane, unsigned int wire) const;
-
   protected:
     
-    //vector of [tpc][wire][time]
-    std::vector<std::vector<std::vector<float>>> * wiredata;
-    // std::vector<float> * data;
-
-    const larutil::Geometry * geoService;
-
-    std::string producer;
-
   };
 }
 #endif

@@ -55,6 +55,38 @@ namespace larlite {
     return pvec;
   }
 
+  PyObject* Converter::Convert(const std::vector<int>& int_array) const
+  {
+    PyObject* pvec = PyList_New(int_array.size());
+
+    for(size_t i=0; i<int_array.size(); ++i) {
+
+      if(PyList_SetItem(pvec, i, PyFloat_FromDouble(int_array[i]))) {
+
+        Py_DECREF(pvec);
+        std::cerr<<"<<Convert>> failed!"<<std::endl;
+        throw std::exception();
+      }
+    }
+    return pvec;
+  }
+
+  PyObject* Converter::Convert(const std::vector<std::vector<int>>& intint_array) const
+  {
+    PyObject* pvec = PyList_New(intint_array.size());
+
+    for(size_t i=0; i<intint_array.size(); ++i) {
+
+      if(PyList_SetItem(pvec, i, Convert(intint_array[i]))) {
+
+        Py_DECREF(pvec);
+        std::cerr<<"<<Convert>> failed!"<<std::endl;
+        throw std::exception();
+      }
+    }
+    return pvec;
+  }
+
 }
 
 

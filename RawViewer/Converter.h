@@ -49,6 +49,8 @@ public:
   PyObject* Convert(const std::vector<std::string>& str_array) const;
   PyObject* Convert(const std::vector<float>& flt_array) const;
   PyObject* Convert(const std::vector<std::vector<float>>& fltflt_array) const;
+  PyObject* Convert(const std::vector<int>& flt_array) const;
+  PyObject* Convert(const std::vector<std::vector<int>>& fltflt_array) const;
 
 };
 

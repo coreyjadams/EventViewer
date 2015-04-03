@@ -3,7 +3,8 @@
 import sys
 from PyQt4 import QtGui, QtCore
 import pyqtgraph as pg
-import rawdata as rd
+# import rawdata as rd
+from dataInterface import *
 
 
 class evd_drawer(pg.GraphicsLayoutWidget):
@@ -62,12 +63,25 @@ class evd_drawer(pg.GraphicsLayoutWidget):
     def connectWireDrawFunction(self, func):
         self._wdf = func
 
+class dataHandler(QtGui.QWidget):
+    """docstring for dataHandler
+        This class connects the different types of data to
+        the different drawers, and is in charge of updating the options
+        to draw
+    """
+    def __init__(self):
+        super(dataHandler, self).__init__()
+
+
+
 class evd(QtGui.QWidget):
 
 
     def __init__(self):
         super(evd, self).__init__()
-        self.initData()
+        # self._filePath = "/media/cadams/data_linux/argoneut_mc/nue_larlite_all.root"
+        self._filePath = ""
+        self._baseData = baseDataInterface()
         self.initUI()
 
     def initUI(self):
@@ -84,25 +98,46 @@ class evd(QtGui.QWidget):
         self._prevButton.setToolTip("Move to the previous event.")
         self._quitButton.setToolTip("Close the viewer.")
 
+        self._fileSelectButton = QtGui.QPushButton("Select File")
+        self._fileSelectButton.clicked.connect(self.selectFile)
+
         # Button to adjust the range to the max:
         self._rangeButton = QtGui.QPushButton("Max Range")
         self._rangeButton.clicked.connect(self.setRangeToMax)
 
         # ColorMap used to color data:
-        self._cmap = pg.GradientWidget(orientation='left')
+        self._cmap = pg.GradientWidget(orientation='top')
+        # self._cmap.resize(1,1)
         colorMapCollection = {'ticks': [(0, (30, 30, 255, 255)), (0.33333, (0, 255, 255, 255)), (0.66666, (255,255,100,255)), (1, (255, 0, 0, 255))], 'mode': 'rgb'}
         self._cmap.restoreState(colorMapCollection)
         self._cmap.sigGradientChanged.connect(self.refreshGradient)
+        # print self._cmap.size()
 
-
-        # self._cmap.setFields({(mode: {0,1,2,4})})
         # Area to hold buttons
         self._controlBox = QtGui.QVBoxLayout()
+        
+
+
+
+
         self._controlBox.addWidget(self._nextButton)
         self._controlBox.addWidget(self._prevButton)
+        self._controlBox.addWidget(self._fileSelectButton)
         # self._controlBox.addWidget(self._colorButton)
-        self._controlBox.addWidget(self._cmap)
+        # self._controlBox.addWidget(self._cmap)
         self._controlBox.addWidget(self._rangeButton)
+        
+        # Set up the labels that hold the data:
+        self.initDataChoices()
+        for key in self._dataListsAndLabels:
+            self._controlBox.addWidget(self._dataListsAndLabels[key])
+
+        self._drawRawOption = QtGui.QCheckBox("Draw Raw")
+        self._drawRawOption.stateChanged.connect(self.updateImage)
+
+
+        self._controlBox.addWidget(self._drawRawOption)
+
         self._controlBox.addStretch(1)
         self._controlBox.addWidget(self._quitButton)
 
@@ -113,8 +148,8 @@ class evd(QtGui.QWidget):
         # Area to hold data:
         self._dataBox = QtGui.QGridLayout()
         self._drawerList = []
-        nplanes = self.r.nplanes
-        for i in range(0, nplanes):
+        nviews = self._baseData._nviews
+        for i in range(0, nviews):
             # These boxes hold the wire/time views:
             self._drawerList.append(evd_drawer())
             # print 
@@ -125,7 +160,7 @@ class evd(QtGui.QWidget):
 
         # Make an extra space for wires:
         self._drawerList.append(pg.GraphicsLayoutWidget())
-        self._dataBox.addWidget(self._drawerList[-1],2*nplanes+1,1,2,1)
+        self._dataBox.addWidget(self._drawerList[-1],2*nviews+1,1,2,1)
         
         self._wirePlot = self._drawerList[-1].addPlot()
         self._wirePlotItem = pg.PlotDataItem()
@@ -133,12 +168,12 @@ class evd(QtGui.QWidget):
 
         # Connect the wire drawing box to the planes so that they may
         # update it
-        for i in range(0, nplanes):
+        for i in range(0, nviews):
             self._drawerList[i].connectWireDrawFunction(self.drawWire)
 
         # Put the layout together
         grid = QtGui.QGridLayout()
-        grid.addLayout(self._controlBox,1,0,2*nplanes+1,1)
+        grid.addLayout(self._controlBox,1,0,2*nviews+1,1)
         grid.addLayout(self._dataBox,1,1)
         grid.addWidget(self.statusBar)
         self.setLayout(grid)    
@@ -150,57 +185,104 @@ class evd(QtGui.QWidget):
 
         self.setRangeToMax()
 
-        self.initData()
-        self.draw()
+        self.updateImage()
 
+    def initDataChoices(self):
+        # Create a tuple of options and their labels
+        # Add the raw, clusters, and hits:
+        self._dataListsAndLabels = {'Hits': QtGui.QComboBox(), 'HitsLabel': QtGui.QLabel("Hits:") }
+        for key in self._baseData._fileInterface.getListOfKeys():
+            # self._dataListsAndLabels['Hits'].addItem(key)
+            print key
+        
+        self._dataListsAndLabels['Hits'].addItem("item 2")
+        self._dataListsAndLabels['Hits'].addItem("item 3")
+        self._dataListsAndLabels['Hits'].activated[str].connect(self.dataChoiceChanged)
+
+    def dataChoiceChanged(self, text):
+        print "Choiced changed to ", text
 
     def initData(self):
-        self.r = rd.RawData()
-        self.r.init_proc()
-        self.r.add_input_file("/media/cadams/data_linux/argoneut_mc/nue_larlite_all.root")
-        self.r.init_geom()
-        self.r.config_argo()
+        self._baseData.set_input_file(self._filePath)
+        # check for raw data, make a handle for it if available:
+        if 'wire' in self._baseData._fileInterface.getListOfKeys():
+            # print "Adding wire data"
+            # print self._baseData._fileInterface.getListOfKeys()
+            # print self._baseData._fileInterface.getListOfKeys()['wire'][0]
+            self._baseData.add_drawing_process('wire',self._baseData._fileInterface.getListOfKeys()['wire'][0])
+        # self.r = rd.RawData()
+        # self.r.init_proc()
+        # self.r.add_input_file(self._filePath)
+        # self.r.init_geom()
+        # self.r.config_argo()
         # d = r.get_img()
+        
+        # TODO
+        # Here's how I imagine the workflow:
+        # 1) Initialize the GUI, no file required
+        # 2) Upon loading a file, find out what is available to draw
+        # 3) Draw the raw data, if available
+        #   a) If no raw, draw hits.  If not hits, draw clusters. etc.
+        # 4) As the user selects more things to draw, add the drawing 
+        #    to the interface and draw those things!
+
 
     # What follows are functions to manage the next, prev events etc.
 
-    def draw(self):
-      d = self.r.get_img()
-      for i in range (0, self.r.nplanes):
-          self._drawerList[i]._item.setImage(d[i], scale=self.r.aspectRatio)
+    def drawRaw(self):
+      d = self._baseData._daughterProcesses['wire'].get_img()
+      for i in range (0, self._baseData._nviews):
+          self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
           self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
-
       self.drawWire(1,201)
+      print "Called Draw Raw"
+      pass
 
     def drawWire(self, plane,wire):
       # just testing, draw one wire (plane 0, wire 200)
-      wire = self.r.get_wire(plane,wire)
+      wire =self._baseData._daughterProcesses['wire'].get_wire(plane,wire)
       self._wirePlotItem.setData(wire)
+      pass
+
+    def updateImage(self):
+        self._baseData.processEvent()
+        if self._drawRawOption.isChecked():
+          self.drawRaw()
+        else:
+          for i in range (0, self._baseData._nviews):
+            self._drawerList[i]._item.setImage(None, scale=self._baseData._aspectRatio)
+            self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
+      
+
+
 
     def nextEvent(self):
-      self.r.event += 1
-      self.draw()
+      self._baseData._event += 1
+      self.updateImage()
 
     def prevEvent(self):
-      if self.r.event != 1:
-          self.r.event -= 1
-      self.draw()
+      if self._baseData._event != 1:
+          self._baseData._event -= 1
+      self.updateImage()
 
     def refreshGradient(self):
       # print ("Gradient Changed")
-      for i in range (0, self.r.nplanes):
+      for i in range (0, self._baseData._nviews):
           self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
 
     # def clickImage(self):
         # print
 
     def setRangeToMax(self):
-      for i in range (0, self.r.nplanes):
+      for i in range (0, self._baseData._nviews):
         self._drawerList[i]._view.setRange(xRange=(0,240),yRange=(0,1600), padding=0)
         # self._views[i].setXRange(0,240)
         # self._views[i].setYRange(0,2400)
 
-
+    def selectFile(self):
+        self._filePath = str(QtGui.QFileDialog.getOpenFileName())
+        self.initData()
+        self.updateImage()
 
 def main():
     

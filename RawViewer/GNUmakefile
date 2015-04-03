@@ -3,8 +3,8 @@
 #
 
 # specific names for this package
-DICT  = RawViewerCint
-SHLIB = libargoneut_electrons_RawViewer.so
+DICT  = EventViewer_RawViewerCint
+SHLIB = libEventViewer_RawViewer.so
 SOURCES = $(filter-out $(DICT).cxx, $(wildcard *.cxx))
 FMWK_HEADERS = LinkDef.h $(DICT).h
 HEADERS = $(filter-out $(FMWK_HEADERS), $(wildcard *.h))

@@ -1,12 +1,13 @@
-#ifndef LARLITE_DRAWRAW_CXX
-#define LARLITE_DRAWRAW_CXX
+#ifndef DRAWHIT_CXX
+#define DRAWHIT_CXX
 
-#include "DrawRaw.h"
-#include "DataFormat/wire.h"
+#include "DrawHit.h"
+#include "DataFormat/hit.h"
 
 namespace larlite {
 
-  bool DrawRaw::initialize() {
+
+  bool DrawHit::initialize() {
 
     //
     // This function is called in the beggining of event loop
@@ -18,21 +19,16 @@ namespace larlite {
     // Initialize the geoService object:
     geoService = larutil::Geometry::GetME();
 
-    // Initialize data holder:
-    wiredata = new std::vector<std::vector<std::vector<float> > > ;
     // Resize data holder to accomodate planes and wires:
-    wiredata->resize(geoService -> Nplanes());
-    for (unsigned int p = 0; p < geoService -> Nplanes(); p ++){
-      wiredata->at(p).resize(geoService->Nwires(p));
-    }
-
-    std::cout << "\n\nCompleted initialize.\n\n";
+    wireByPlane     -> resize(geoService -> Nplanes());
+    hitStartByPlane -> resize(geoService -> Nplanes());
+    hitEndByPlane   -> resize(geoService -> Nplanes());
 
     return true;
 
   }
   
-  bool DrawRaw::analyze(storage_manager* storage) {
+  bool DrawHit::analyze(storage_manager* storage) {
   
     //
     // Do your event-by-event analysis here. This function is called for 
@@ -51,20 +47,33 @@ namespace larlite {
     //   std::cout << "Event ID: " << my_pmtfifo_v->event_id() << std::endl;
     //
 
-    // This is an event viewer.  In particular, this handles raw wire signal drawing.
-    // So, obviously, first thing to do is to get the wires.
-    auto WireHandle = storage->get_data<larlite::event_wire>(producer);
+    // get a handle to the hits
+    auto hitHandle = storage->get_data<larlite::event_hit>("hit");
+
+    // Clear out the hit data but reserve some space for the hits
+    for (unsigned int p = 0; p < geoService -> Nplanes(); p ++){
+      wireByPlane     ->at(p).clear();
+      hitStartByPlane ->at(p).clear();
+      hitEndByPlane   ->at(p).clear();
+
+      wireByPlane     ->at(p).reserve(hitHandle -> size());
+      hitStartByPlane ->at(p).reserve(hitHandle -> size());
+      hitEndByPlane   ->at(p).reserve(hitHandle -> size());
+    }
     
 
-    for (auto & wire: *WireHandle){
-        unsigned int ch = wire.Channel();
-        wiredata->at(geoService->ChannelToPlane(ch))[geoService->ChannelToWire(ch)] = wire.Signal();
+    
+    for (auto & hit: *hitHandle){
+        unsigned int view = hit.View();
+        wireByPlane -> at(view).push_back(hit.Wire());
+        hitStartByPlane -> at(view).push_back(hit.StartTime());
+        hitEndByPlane -> at(view).push_back(hit.EndTime());
     }
 
     return true;
   }
 
-  bool DrawRaw::finalize() {
+  bool DrawHit::finalize() {
 
     // This function is called at the end of event loop.
     // Do all variable finalization you wish to do here.
@@ -79,48 +88,62 @@ namespace larlite {
     //   print(MSG::ERROR,__FUNCTION__,"Did not find an output file pointer!!! File not opened?");
     //
   
-    delete wiredata;
+    delete wireByPlane;    
+    delete hitStartByPlane;
+    delete hitEndByPlane;  
 
     return true;
   }
-
-  const std::vector<std::vector<float>> & DrawRaw::getDataByPlane(unsigned int p) const{
-    static std::vector<std::vector<float>> returnNull;
+  
+  const std::vector<int> & DrawHit::getWireByPlane(unsigned int p) const{
+    static std::vector<int> returnNull;
     if (p >= geoService->Nplanes() || p < 0){
       std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
       return returnNull;
     }
     else{
-      if (wiredata !=0){
-        return wiredata->at(p);
+      if (wireByPlane !=0){
+        return wireByPlane->at(p);
       }
       else{
         return returnNull;
       }
     }
-    
   }
 
-  const std::vector<float> & DrawRaw::getWireData(unsigned int plane, unsigned int wire) const{
+  const std::vector<float> & DrawHit::getHitStartByPlane(unsigned int p) const{
     static std::vector<float> returnNull;
-    if (plane >= geoService->Nplanes() || plane < 0){
-      std::cerr << "ERROR: Request for nonexistant plane " << plane << std::endl;
+    if (p >= geoService->Nplanes() || p < 0){
+      std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
       return returnNull;
     }
-    if (wire >= geoService->Nwires(plane) || wire < 0){
-        std::cerr << "ERROR: Request for nonexistant wire " << wire << std::endl;
-    }
     else{
-      if (wiredata !=0){
-        return wiredata->at(plane).at(wire);
+      if (hitStartByPlane !=0){
+        return hitStartByPlane->at(p);
       }
       else{
         return returnNull;
       }
     }
-    
+  }
+
+  const std::vector<float> & DrawHit::getHitEndByPlane(unsigned int p) const{
+    static std::vector<float> returnNull;
+    if (p >= geoService->Nplanes() || p < 0){
+      std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
+      return returnNull;
+    }
+    else{
+      if (hitEndByPlane !=0){
+        return hitEndByPlane->at(p);
+      }
+      else{
+        return returnNull;
+      }
+    }
   }
 
 
-}
+} // larlite
+
 #endif

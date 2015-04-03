@@ -12,7 +12,7 @@ class RawData():
   def __init__(self):
     gSystem.Load("libLArLite_LArUtil")
     gSystem.Load("libargoneut_electrons_EventViewer.so")
-    gSystem.Load("libExample_PyPackage.so")   
+    # gSystem.Load("libExample_PyPackage.so")   
     self.event=1
     self.filename = []
     self.init_converter()
