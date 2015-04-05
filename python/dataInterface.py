@@ -39,6 +39,18 @@ class hitInterface(object):
     super(hitInterface, self).__init__()
     self._process = fmwk.DrawHit()
     self._producer = ""
+    self._nviews=larutil.Geometry.GetME().Nviews()
+    self._c2p = fmwk.Converter()
+
+  def get_hits(self):
+    h = []
+    for i in range(0, self._nviews):
+      view = []
+      view.append(np.array(self._c2p.Convert(self._process.getWireByPlane())))
+      view.append(np.array(self._c2p.Convert(self._process.getWireByPlane())))
+      view.append(np.array(self._c2p.Convert(self._process.getWireByPlane())))
+      h.append(view)
+    return h
 
 
 class baseDataInterface(object):
@@ -81,7 +93,7 @@ class baseDataInterface(object):
     if self._fileInterface.fileExists(file):
       self._fileInterface.pingFile(file)
     else:
-      print "Requested file does not exist"
+      print "Requested file does not exist: ", file
       return
     self._my_proc.add_input_file(file) 
     self._hasFile=True
@@ -112,4 +124,5 @@ class baseDataInterface(object):
   def processEvent(self):
     if self._lastProcessed != self._event:
       self._my_proc.process_event(self._event)
+      self._lastProcessed = self._event
 

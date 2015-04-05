@@ -85,6 +85,9 @@ class evd(QtGui.QWidget):
         self.initUI()
 
     def initUI(self):
+
+
+
         # Buttons for using the event display:
         self._nextButton = QtGui.QPushButton("Next")
         self._prevButton = QtGui.QPushButton("Previous")
@@ -127,13 +130,19 @@ class evd(QtGui.QWidget):
         # self._controlBox.addWidget(self._cmap)
         self._controlBox.addWidget(self._rangeButton)
         
+
+        self._drawRawOption = QtGui.QCheckBox("Draw Raw")
+        self._drawRawOption.stateChanged.connect(self.updateImage)
+        self._drawHitsOption = QtGui.QCheckBox("Draw Hits")
+        self._drawHitsOption.stateChanged.connect(self.updateImage)
+        self._drawClustersOption = QtGui.QCheckBox("Draw Clusters")
+        self._drawClustersOption.stateChanged.connect(self.updateImage)
+
+        # Add labels for the hits and clusters:
         # Set up the labels that hold the data:
         self.initDataChoices()
         for key in self._dataListsAndLabels:
             self._controlBox.addWidget(self._dataListsAndLabels[key])
-
-        self._drawRawOption = QtGui.QCheckBox("Draw Raw")
-        self._drawRawOption.stateChanged.connect(self.updateImage)
 
 
         self._controlBox.addWidget(self._drawRawOption)
@@ -183,6 +192,13 @@ class evd(QtGui.QWidget):
         self.setWindowTitle('Buttons')    
         self.show()
 
+
+        # If there was a file passed on commandline, try to use it:
+        if (sys.argv > 2):
+            self._filePath = sys.argv[-1]
+            self.initData()
+            self.updateDataChoices()
+            
         self.setRangeToMax()
 
         self.updateImage()
@@ -191,13 +207,31 @@ class evd(QtGui.QWidget):
         # Create a tuple of options and their labels
         # Add the raw, clusters, and hits:
         self._dataListsAndLabels = {'Hits': QtGui.QComboBox(), 'HitsLabel': QtGui.QLabel("Hits:") }
+        self._dataListsAndLabels.update({'Clusters': QtGui.QComboBox(), 'ClustersLabel': QtGui.QLabel("Clusters:") })
         for key in self._baseData._fileInterface.getListOfKeys():
             # self._dataListsAndLabels['Hits'].addItem(key)
             print key
         
-        self._dataListsAndLabels['Hits'].addItem("item 2")
-        self._dataListsAndLabels['Hits'].addItem("item 3")
+        # self._dataListsAndLabels['Hits'].addItem("item 2")
+        # self._dataListsAndLabels['Hits'].addItem("item 3")
         self._dataListsAndLabels['Hits'].activated[str].connect(self.dataChoiceChanged)
+
+
+    def updateDataChoices(self):
+        # Call this method to refresh the list of available data products to draw
+        for key in self._baseData._fileInterface.getListOfKeys():
+            # self._dataListsAndLabels['Hits'].addItem(key)
+            if key == 'hit':
+                self._dataListsAndLabels['Hits'].clear()
+                self._dataListsAndLabels['Hits'].addItem("--None--")
+                for item in self._baseData._fileInterface.getListOfKeys()['hit']:
+                    self._dataListsAndLabels['Hits'].addItem(item)
+
+            if key == 'cluster':
+                self._dataListsAndLabels['Clusters'].clear()
+                self._dataListsAndLabels['Clusters'].addItem("--None--")
+                for item in self._baseData._fileInterface.getListOfKeys()['cluster']:
+                    self._dataListsAndLabels['Clusters'].addItem(item)
 
     def dataChoiceChanged(self, text):
         print "Choiced changed to ", text
@@ -240,17 +274,36 @@ class evd(QtGui.QWidget):
 
     def drawWire(self, plane,wire):
       # just testing, draw one wire (plane 0, wire 200)
-      wire =self._baseData._daughterProcesses['wire'].get_wire(plane,wire)
-      self._wirePlotItem.setData(wire)
+      if self._drawRawOption.isChecked():
+          wire =self._baseData._daughterProcesses['wire'].get_wire(plane,wire)
+          self._wirePlotItem.setData(wire)
+
+    def drawHits(self):
+        pass
+
+    def drawClusters(self):
+        pass
 
     def updateImage(self):
-        if self._baseData._hasFile:
-          self._baseData.processEvent()
-          if self._drawRawOption.isChecked():
-            self.drawRaw()
-          else:
+        drawn = False
+        if not self._baseData._hasFile:
             self.drawBlank()
+            return
         else:
+            self._baseData.processEvent()
+        if self._drawRawOption.isChecked():
+            self.drawRaw()
+            drawn = True
+            pass
+        if self._drawHitsOption.isChecked():
+            self.drawHits()
+            drawn = True
+            pass
+        if self._drawClustersOption.isChecked():
+            self.drawClusters()
+            drawn = True
+
+        if not drawn:
           self.drawBlank()
 
     def nextEvent(self):
@@ -279,6 +332,7 @@ class evd(QtGui.QWidget):
     def selectFile(self):
         self._filePath = str(QtGui.QFileDialog.getOpenFileName())
         self.initData()
+        self.updateDataChoices()
         self.updateImage()
 
 def main():
