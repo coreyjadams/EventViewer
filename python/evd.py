@@ -247,9 +247,9 @@ class evd(QtGui.QWidget):
         # This is the only method monitoring the status of hit drawing
         # So it is responsible for cleaning up the hits if the 
         # choice changes
-        if text == '--None--' or text == '--Select--':
-            for view in range(0,self._baseData._nviews):
-                self._drawerList[view].clearHits()
+        # if text == '--None--' or text == '--Select--':
+        for view in range(0,self._baseData._nviews):
+            self._drawerList[view].clearHits()
 
         # print "Hits choice changed to ", text
         if 'hit' in self._baseData._fileInterface.getListOfKeys():
@@ -264,10 +264,10 @@ class evd(QtGui.QWidget):
         # This is the only method monitoring the status of hit drawing
         # So it is responsible for cleaning up the hits if the 
         # choice changes
-        if text == '--None--' or text == '--Select--':
-            for view in range(0,self._baseData._nviews):
-                self._drawerList[view].clearClusters()
-
+        # if text == '--None--' or text == '--Select--':
+        for view in range(0,self._baseData._nviews):
+            self._drawerList[view].clearClusters()
+                
         # print "Hits choice changed to ", text
         if 'cluster' in self._baseData._fileInterface.getListOfKeys():
             if text in self._baseData._fileInterface.getListOfKeys()['cluster']:
@@ -346,7 +346,7 @@ class evd(QtGui.QWidget):
                 for hitIndex in range(0, len(h[0])):
                     self._drawerList[view].drawRect(h[0][hitIndex], h[1][hitIndex],h[2][hitIndex],colors[colorIndex])
                 colorIndex += 1
-                if colorIndex > len(colors):
+                if colorIndex >= len(colors):
                     colorIndex = 0
 
     def updateImage(self):
