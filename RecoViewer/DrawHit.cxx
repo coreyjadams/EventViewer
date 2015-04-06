@@ -7,6 +7,15 @@
 namespace larlite {
 
 
+  DrawHit::DrawHit(){
+    _name="DrawCluster";
+    _fout=0;
+    // std::cout << "Constructing!" << std::endl;
+    wireByPlane = new std::vector<std::vector<int>>;
+    hitStartByPlane = new std::vector<std::vector<float>>;
+    hitEndByPlane = new std::vector<std::vector<float>>;
+  }
+
   bool DrawHit::initialize() {
 
     //
@@ -19,11 +28,14 @@ namespace larlite {
     // Initialize the geoService object:
     geoService = larutil::Geometry::GetME();
 
-    // Resize data holder to accomodate planes and wires:
-    wireByPlane     -> resize(geoService -> Nplanes());
-    hitStartByPlane -> resize(geoService -> Nplanes());
-    hitEndByPlane   -> resize(geoService -> Nplanes());
 
+    // Resize data holder to accomodate planes and wires:
+    if (wireByPlane -> size() != geoService -> Nviews()){
+      // std::cout << "resizing vectors to: " << geoService -> Nviews() << std::endl;
+      wireByPlane     -> resize(geoService -> Nviews());
+      hitStartByPlane -> resize(geoService -> Nviews());
+      hitEndByPlane   -> resize(geoService -> Nviews());
+    }
     return true;
 
   }
@@ -47,11 +59,25 @@ namespace larlite {
     //   std::cout << "Event ID: " << my_pmtfifo_v->event_id() << std::endl;
     //
 
+    // Initialize the geoService object:
+    if (!geoService)
+      geoService = larutil::Geometry::GetME();
+
+
+
+    // Resize data holder to accomodate planes and wires:
+    if (wireByPlane->size() == 0){
+      wireByPlane     -> resize(geoService -> Nviews());
+      hitStartByPlane -> resize(geoService -> Nviews());
+      hitEndByPlane   -> resize(geoService -> Nviews());
+    }
+
+
     // get a handle to the hits
-    auto hitHandle = storage->get_data<larlite::event_hit>("hit");
+    auto hitHandle = storage->get_data<larlite::event_hit>(producer);
 
     // Clear out the hit data but reserve some space for the hits
-    for (unsigned int p = 0; p < geoService -> Nplanes(); p ++){
+    for (unsigned int p = 0; p < geoService -> Nviews(); p ++){
       wireByPlane     ->at(p).clear();
       hitStartByPlane ->at(p).clear();
       hitEndByPlane   ->at(p).clear();
@@ -87,17 +113,19 @@ namespace larlite {
     // else 
     //   print(MSG::ERROR,__FUNCTION__,"Did not find an output file pointer!!! File not opened?");
     //
-  
+    return true;
+  }
+
+  DrawHit::~DrawHit(){
     delete wireByPlane;    
     delete hitStartByPlane;
     delete hitEndByPlane;  
 
-    return true;
   }
   
   const std::vector<int> & DrawHit::getWireByPlane(unsigned int p) const{
     static std::vector<int> returnNull;
-    if (p >= geoService->Nplanes() || p < 0){
+    if (p >= geoService->Nviews() || p < 0){
       std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
       return returnNull;
     }
@@ -113,7 +141,7 @@ namespace larlite {
 
   const std::vector<float> & DrawHit::getHitStartByPlane(unsigned int p) const{
     static std::vector<float> returnNull;
-    if (p >= geoService->Nplanes() || p < 0){
+    if (p >= geoService->Nviews() || p < 0){
       std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
       return returnNull;
     }
@@ -129,7 +157,7 @@ namespace larlite {
 
   const std::vector<float> & DrawHit::getHitEndByPlane(unsigned int p) const{
     static std::vector<float> returnNull;
-    if (p >= geoService->Nplanes() || p < 0){
+    if (p >= geoService->Nviews() || p < 0){
       std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
       return returnNull;
     }

@@ -19,6 +19,7 @@ class evd_drawer(pg.GraphicsLayoutWidget):
         # connect the views to mouse move events, used to update the info box at the bottom
         self.scene().sigMouseMoved.connect(self.mouseMoved)
         self._plane = -1
+        self._listOfHits = []
 
 
     def mouseMoved(self, pos):
@@ -53,12 +54,24 @@ class evd_drawer(pg.GraphicsLayoutWidget):
     def connectStatusBar(self, statusBar):
         self.statusBar = statusBar
 
-    def drawRect(self):
+    def drawRect(self, wire=20, timeStart=20, timeStop=25,brush=(0,0,0)):
         # Draws a rectangle at (x,y,xlength, ylength)
-        r1 = pg.QtGui.QGraphicsRectItem(10, 20, 1, 5)
+        r1 = pg.QtGui.QGraphicsRectItem(wire, timeStart, 1, timeStop-timeStart)
         r1.setPen(pg.mkPen(None))
-        r1.setBrush(pg.mkBrush('r'))
+        r1.setBrush(pg.mkColor(brush))
+        self._listOfHits.append(r1)
         self._view.addItem(r1)
+        return r1
+
+    def clearHits(self):
+        for hit in self._listOfHits:
+            self._view.removeItem(hit)
+        self._listOfHits = []
+
+    def clearClusters(self):
+        for hit in self._listOfHits:
+            self._view.removeItem(hit)
+        self._listOfHits = []        
 
     def connectWireDrawFunction(self, func):
         self._wdf = func
@@ -111,8 +124,9 @@ class evd(QtGui.QWidget):
         # ColorMap used to color data:
         self._cmap = pg.GradientWidget(orientation='top')
         # self._cmap.resize(1,1)
-        colorMapCollection = {'ticks': [(0, (30, 30, 255, 255)), (0.33333, (0, 255, 255, 255)), (0.66666, (255,255,100,255)), (1, (255, 0, 0, 255))], 'mode': 'rgb'}
-        self._cmap.restoreState(colorMapCollection)
+        self._colorMapCollection = {'ticks': [(0, (30, 30, 255, 255)), (0.33333, (0, 255, 255, 255)), (0.66666, (255,255,100,255)), (1, (255, 0, 0, 255))], 'mode': 'rgb'}
+        self._blankMapCollection = {'ticks': [(0, (255, 255, 255, 255)), (1, (255, 255, 255, 255))], 'mode': 'rgb'}
+        self._cmap.restoreState(self._colorMapCollection)
         self._cmap.sigGradientChanged.connect(self.refreshGradient)
         # print self._cmap.size()
 
@@ -132,11 +146,9 @@ class evd(QtGui.QWidget):
         
 
         self._drawRawOption = QtGui.QCheckBox("Draw Raw")
-        self._drawRawOption.stateChanged.connect(self.updateImage)
-        self._drawHitsOption = QtGui.QCheckBox("Draw Hits")
-        self._drawHitsOption.stateChanged.connect(self.updateImage)
-        self._drawClustersOption = QtGui.QCheckBox("Draw Clusters")
-        self._drawClustersOption.stateChanged.connect(self.updateImage)
+        self._drawRawOption.setCheckState(True)
+        self._drawRawOption.setTristate(False)
+        self._drawRawOption.stateChanged.connect(self.rawChoiceChanged)
 
         # Add labels for the hits and clusters:
         # Set up the labels that hold the data:
@@ -208,14 +220,12 @@ class evd(QtGui.QWidget):
         # Add the raw, clusters, and hits:
         self._dataListsAndLabels = {'Hits': QtGui.QComboBox(), 'HitsLabel': QtGui.QLabel("Hits:") }
         self._dataListsAndLabels.update({'Clusters': QtGui.QComboBox(), 'ClustersLabel': QtGui.QLabel("Clusters:") })
-        for key in self._baseData._fileInterface.getListOfKeys():
-            # self._dataListsAndLabels['Hits'].addItem(key)
-            print key
-        
-        # self._dataListsAndLabels['Hits'].addItem("item 2")
-        # self._dataListsAndLabels['Hits'].addItem("item 3")
-        self._dataListsAndLabels['Hits'].activated[str].connect(self.dataChoiceChanged)
 
+        self._dataListsAndLabels['Hits'].addItem("--None--")
+        self._dataListsAndLabels['Clusters'].addItem("--None--")
+        # self._dataListsAndLabels['Hits'].addItem("item 3")
+        self._dataListsAndLabels['Hits'].activated[str].connect(self.hitsChoiceChanged)
+        self._dataListsAndLabels['Clusters'].activated[str].connect(self.clusterChoiceChanged)
 
     def updateDataChoices(self):
         # Call this method to refresh the list of available data products to draw
@@ -223,18 +233,55 @@ class evd(QtGui.QWidget):
             # self._dataListsAndLabels['Hits'].addItem(key)
             if key == 'hit':
                 self._dataListsAndLabels['Hits'].clear()
-                self._dataListsAndLabels['Hits'].addItem("--None--")
+                self._dataListsAndLabels['Hits'].addItem("--Select--")
                 for item in self._baseData._fileInterface.getListOfKeys()['hit']:
                     self._dataListsAndLabels['Hits'].addItem(item)
 
             if key == 'cluster':
                 self._dataListsAndLabels['Clusters'].clear()
-                self._dataListsAndLabels['Clusters'].addItem("--None--")
+                self._dataListsAndLabels['Clusters'].addItem("--Select--")
                 for item in self._baseData._fileInterface.getListOfKeys()['cluster']:
                     self._dataListsAndLabels['Clusters'].addItem(item)
 
-    def dataChoiceChanged(self, text):
-        print "Choiced changed to ", text
+    def hitsChoiceChanged(self, text):
+        # This is the only method monitoring the status of hit drawing
+        # So it is responsible for cleaning up the hits if the 
+        # choice changes
+        if text == '--None--' or text == '--Select--':
+            for view in range(0,self._baseData._nviews):
+                self._drawerList[view].clearHits()
+
+        # print "Hits choice changed to ", text
+        if 'hit' in self._baseData._fileInterface.getListOfKeys():
+            if text in self._baseData._fileInterface.getListOfKeys()['hit']:
+                # print "Trying to add the hits process ..."
+                self._baseData.add_drawing_process('hit',text)
+            else:
+                self._baseData.remove_drawing_process('hit')
+        self.updateImage()
+
+    def clusterChoiceChanged(self,text):
+        # This is the only method monitoring the status of hit drawing
+        # So it is responsible for cleaning up the hits if the 
+        # choice changes
+        if text == '--None--' or text == '--Select--':
+            for view in range(0,self._baseData._nviews):
+                self._drawerList[view].clearClusters()
+
+        # print "Hits choice changed to ", text
+        if 'cluster' in self._baseData._fileInterface.getListOfKeys():
+            if text in self._baseData._fileInterface.getListOfKeys()['cluster']:
+                print "Trying to add the clusters process ..."
+                self._baseData.add_drawing_process('cluster',text)
+            else:
+                self._baseData.remove_drawing_process('cluster')
+        self.updateImage()
+
+    def rawChoiceChanged(self):
+        if self._drawRawOption.isChecked():
+            self.drawRaw()
+        else:
+            self.drawBlank()       
 
     def initData(self):
         self._baseData.set_input_file(self._filePath)
@@ -244,7 +291,7 @@ class evd(QtGui.QWidget):
             # print self._baseData._fileInterface.getListOfKeys()
             # print self._baseData._fileInterface.getListOfKeys()['wire'][0]
             self._baseData.add_drawing_process('wire',self._baseData._fileInterface.getListOfKeys()['wire'][0])
-
+            return
         
         # TODO
         # Here's how I imagine the workflow:
@@ -260,16 +307,19 @@ class evd(QtGui.QWidget):
 
     def drawRaw(self):
       d = self._baseData._daughterProcesses['wire'].get_img()
+      self._cmap.restoreState(self._colorMapCollection)
       for i in range (0, self._baseData._nviews):
           self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
           self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
       self.drawWire(1,1)
 
     def drawBlank(self):
-      d = self._baseData._blankData  
+      print "called draw Blank"
+      # d = self._baseData._blankData  
+      self._cmap.restoreState(self._blankMapCollection)
       for i in range (0, self._baseData._nviews):
-          self._drawerList[i]._item.setImage(d, scale=self._baseData._aspectRatio)
-          # self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
+          # self._drawerList[i]._item.setImage(image=None, scale=self._baseData._aspectRatio)
+          self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
 
 
     def drawWire(self, plane,wire):
@@ -279,10 +329,25 @@ class evd(QtGui.QWidget):
           self._wirePlotItem.setData(wire)
 
     def drawHits(self):
-        pass
+        # print self._baseData._daughterProcesses.keys()
+        for view in range(0,self._baseData._nviews):
+            hits = self._baseData._daughterProcesses['hit'].get_hits(view)
+            for hitIndex in range(0, len(hits[0])):
+                self._drawerList[view].drawRect(hits[0][hitIndex], hits[1][hitIndex],hits[2][hitIndex])
 
     def drawClusters(self):
-        pass
+        procs = self._baseData._daughterProcesses
+        colors = self._baseData._daughterProcesses['cluster']._clusterColors
+        # print procs.keys()
+        for view in range(0,self._baseData._nviews):
+            colorIndex = 0
+            for cluster in range(0, procs['cluster'].get_n_clusters(view)):
+                h = procs['cluster'].get_hits(view,cluster)
+                for hitIndex in range(0, len(h[0])):
+                    self._drawerList[view].drawRect(h[0][hitIndex], h[1][hitIndex],h[2][hitIndex],colors[colorIndex])
+                colorIndex += 1
+                if colorIndex > len(colors):
+                    colorIndex = 0
 
     def updateImage(self):
         drawn = False
@@ -295,24 +360,32 @@ class evd(QtGui.QWidget):
             self.drawRaw()
             drawn = True
             pass
-        if self._drawHitsOption.isChecked():
+        if self._dataListsAndLabels['Hits'].currentText() != '--Select--':
+          if self._dataListsAndLabels['Hits'].currentText() != '--None--':
             self.drawHits()
             drawn = True
             pass
-        if self._drawClustersOption.isChecked():
+        if self._dataListsAndLabels['Clusters'].currentText() != '--Select--':
+          if self._dataListsAndLabels['Clusters'].currentText() != '--None--':
             self.drawClusters()
             drawn = True
 
         if not drawn:
           self.drawBlank()
 
+    def clearDrawnProducts(self):
+        for view in range(0,self._baseData._nviews):
+            self._drawerList[view].clearHits()
+
     def nextEvent(self):
       self._baseData._event += 1
+      self.clearDrawnProducts()
       self.updateImage()
 
     def prevEvent(self):
       if self._baseData._event != 1:
           self._baseData._event -= 1
+      self.clearDrawnProducts()
       self.updateImage()
 
     def refreshGradient(self):

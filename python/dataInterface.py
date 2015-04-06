@@ -33,24 +33,64 @@ class rawDataInterface(object):
     self._producer = prod
     self._process.setProducer(prod)
 
+
+
+
 class hitInterface(object):
 
   def __init__(self):
     super(hitInterface, self).__init__()
+    # print "In the init function for the hit interface"
     self._process = fmwk.DrawHit()
     self._producer = ""
     self._nviews=larutil.Geometry.GetME().Nviews()
     self._c2p = fmwk.Converter()
 
-  def get_hits(self):
+  def get_hits(self, view):
     h = []
-    for i in range(0, self._nviews):
-      view = []
-      view.append(np.array(self._c2p.Convert(self._process.getWireByPlane())))
-      view.append(np.array(self._c2p.Convert(self._process.getWireByPlane())))
-      view.append(np.array(self._c2p.Convert(self._process.getWireByPlane())))
-      h.append(view)
+    # for i in range(0, self._nviews):
+    h.append(np.array(self._c2p.Convert(self._process.getWireByPlane(view))))
+    h.append(np.array(self._c2p.Convert(self._process.getHitStartByPlane(view))))
+    h.append(np.array(self._c2p.Convert(self._process.getHitEndByPlane(view))))
     return h
+
+  def setProducer(self, prod):
+    self._producer = str(prod)
+    self._process.setProducer(self._producer)
+
+  def initialize(self):
+    self._process.initialize()
+
+class clusterInterface(object):
+
+  def __init__(self):
+    super(clusterInterface, self).__init__()
+    # print "In the init function for the hit interface"
+    self._process = fmwk.DrawCluster()
+    self._producer = ""
+    self._nviews=larutil.Geometry.GetME().Nviews()
+    self._c2p = fmwk.Converter()
+    self._clusterColors = [(0,0,127),(0,147,0),(255,0,0),(127,0,0),(156,0,156),(252,127,0),(255,255,0),(0,252,0),(0,147,147),(0,255,255),(0,0,252),(255,0,255),(127,127,127),(210,210,210)]
+
+
+
+  def get_hits(self, view, cluster):
+    h = []
+    # for i in range(0, self._nviews):
+    h.append(np.array(self._c2p.Convert(self._process.getWireByPlaneAndCluster(view,cluster))))
+    h.append(np.array(self._c2p.Convert(self._process.getHitStartByPlaneAndCluster(view,cluster))))
+    h.append(np.array(self._c2p.Convert(self._process.getHitEndByPlaneAndCluster(view,cluster))))
+    return h
+
+  def get_n_clusters(self,view):
+    return self._process.getNClustersByPlane(view)
+
+  def setProducer(self, prod):
+    self._producer = str(prod)
+    self._process.setProducer(self._producer)
+
+  def initialize(self):
+    self._process.initialize()
 
 
 class baseDataInterface(object):
@@ -104,22 +144,36 @@ class baseDataInterface(object):
     # First, check that the key/products exists
     if dataProduct in self._fileInterface.getListOfKeys():
       if producer in self._fileInterface.getListOfKeys()[dataProduct]:
+
+        # If the interface already exists, don't duplicate it
+        if dataProduct in self._daughterProcesses:
+          self._daughterProcesses.pop(dataProduct)
         # go through the list and add the interface needed:
+
         if dataProduct == 'wire':
           self._daughterProcesses.update({dataProduct : rawDataInterface()} )
           self._my_proc.add_process(self._daughterProcesses[dataProduct]._process)
           self._daughterProcesses[dataProduct].setProducer(producer)
         if dataProduct == 'hit':
-          self._daughterProcesses.update({dataProduct : HitInterface()} )
+          self._daughterProcesses.update({dataProduct : hitInterface()} )
+          self._my_proc.add_process(self._daughterProcesses[dataProduct]._process)
           self._daughterProcesses[dataProduct].setProducer(producer)
-          self._my_proc.add_process(self._daughterProcesses[dataProduct])
+          self._daughterProcesses[dataProduct].initialize()
+        if dataProduct == 'cluster':
+          self._daughterProcesses.update({dataProduct : clusterInterface()} )
+          self._my_proc.add_process(self._daughterProcesses[dataProduct]._process)
+          self._daughterProcesses[dataProduct].setProducer(producer)
+          self._daughterProcesses[dataProduct].initialize()
       else:
         print "Failed to find producer ", producer
     else:
       print "Failed to find data product", dataProduct          
     pass
-    self._my_proc.process_event()
+    self._my_proc.process_event(self._event)
 
+  def remove_drawing_process(self,dataProduct):
+    if dataProduct in self._daughterProcesses:
+      self._daughterProcesses.pop(dataProduct)
 
   def processEvent(self):
     if self._lastProcessed != self._event:

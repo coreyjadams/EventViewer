@@ -6,6 +6,13 @@
 
 namespace larlite {
 
+  DrawRaw::DrawRaw(){ 
+    _name="DrawRaw"; 
+    _fout=0;
+    wiredata = new std::vector<std::vector<std::vector<float> > > ;
+  
+  }
+
   bool DrawRaw::initialize() {
 
     //
@@ -19,14 +26,16 @@ namespace larlite {
     geoService = larutil::Geometry::GetME();
 
     // Initialize data holder:
-    wiredata = new std::vector<std::vector<std::vector<float> > > ;
     // Resize data holder to accomodate planes and wires:
-    wiredata->resize(geoService -> Nplanes());
-    for (unsigned int p = 0; p < geoService -> Nplanes(); p ++){
-      wiredata->at(p).resize(geoService->Nwires(p));
+    if (wiredata -> size() != geoService -> Nviews())
+      wiredata->resize(geoService -> Nviews());
+     
+    for (unsigned int p = 0; p < geoService -> Nviews(); p ++){
+      if (wiredata->at(p).size() != geoService->Nwires(p) )
+        wiredata->at(p).resize(geoService->Nwires(p));
     }
 
-    std::cout << "\n\nCompleted initialize.\n\n";
+    // std::cout << "\n\nCompleted initialize.\n\n";
 
     return true;
 
@@ -86,7 +95,7 @@ namespace larlite {
 
   const std::vector<std::vector<float>> & DrawRaw::getDataByPlane(unsigned int p) const{
     static std::vector<std::vector<float>> returnNull;
-    if (p >= geoService->Nplanes() || p < 0){
+    if (p >= geoService->Nviews() || p < 0){
       std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
       return returnNull;
     }
@@ -103,7 +112,7 @@ namespace larlite {
 
   const std::vector<float> & DrawRaw::getWireData(unsigned int plane, unsigned int wire) const{
     static std::vector<float> returnNull;
-    if (plane >= geoService->Nplanes() || plane < 0){
+    if (plane >= geoService->Nviews() || plane < 0){
       std::cerr << "ERROR: Request for nonexistant plane " << plane << std::endl;
       return returnNull;
     }

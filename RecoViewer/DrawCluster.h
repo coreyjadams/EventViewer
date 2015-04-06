@@ -16,6 +16,7 @@
 #define LARLITE_DRAWCLUSTER_H
 
 #include "Analysis/ana_base.h"
+#include "LArUtil/Geometry.h"
 
 namespace larlite {
   /**
@@ -27,10 +28,10 @@ namespace larlite {
   public:
 
     /// Default constructor
-    DrawCluster(){ _name="DrawCluster"; _fout=0;}
+    DrawCluster();
 
     /// Default destructor
-    virtual ~DrawCluster(){}
+    virtual ~DrawCluster();
 
     /** IMPLEMENT in DrawCluster.cc!
         Initialization method to be called before the analysis event loop.
@@ -47,8 +48,33 @@ namespace larlite {
     */
     virtual bool finalize();
 
+    void setProducer(std::string s){producer = s;}
+
+    int getNClustersByPlane(unsigned int p) const;
+
+    const std::vector<int>   & getWireByPlaneAndCluster(unsigned int p, unsigned int c) const;
+    const std::vector<float> & getHitStartByPlaneAndCluster(unsigned int p, unsigned int c) const;
+    const std::vector<float> & getHitEndByPlaneAndCluster(unsigned int p, unsigned int c) const;
+
   protected:
     
+  private:
+
+    const larutil::Geometry * geoService;
+
+    std::string producer;
+
+    // Internally, keep the hits sorted by cluster
+    // For drawing purposes, need to know all of this hits
+    // by plane but also by cluster.
+    // Return at most 2 index objects (because I don't 
+    // feel like writing the conversion for 3 index)
+    // But store 3 index objects
+    std::vector<std::vector<std::vector<int>   > > * wireByPlaneByCluster;
+    std::vector<std::vector<std::vector<float> > > * hitStartByPlaneByCluster;
+    std::vector<std::vector<std::vector<float> > > * hitEndByPlaneByCluster;
+
+
   };
 }
 #endif

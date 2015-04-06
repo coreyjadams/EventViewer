@@ -31,10 +31,10 @@ namespace larlite {
   public:
 
     /// Default constructor
-    DrawHit(){ _name="DrawCluster"; _fout=0;}
+    DrawHit();
 
     /// Default destructor
-    ~DrawHit(){}
+    ~DrawHit();
 
     /** IMPLEMENT in DrawCluster.cc!
         Initialization method to be called before the analysis event loop.
@@ -51,6 +51,10 @@ namespace larlite {
     */
     virtual bool finalize();
 
+
+    void setProducer(std::string s){producer = s;}
+
+
     const std::vector<int>   & getWireByPlane(unsigned int p) const;
     const std::vector<float> & getHitStartByPlane(unsigned int p) const;
     const std::vector<float> & getHitEndByPlane(unsigned int p) const;
@@ -58,6 +62,8 @@ namespace larlite {
   private:
     
     const larutil::Geometry * geoService;
+
+    std::string producer;
 
     // The hit data gets drawn as rectangles.  So we need to pass 
     // the data in a way that's easy to draw.  That turns out to be

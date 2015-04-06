@@ -28,7 +28,7 @@ namespace larlite {
   public:
 
     /// Default constructor
-    DrawRaw(){ _name="DrawRaw"; _fout=0;}
+    DrawRaw();
 
     /// Default destructor
     virtual ~DrawRaw(){}
