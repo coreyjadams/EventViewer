@@ -106,7 +106,7 @@ class baseDataInterface(object):
     if argo:
       self.config_argo()
     self.init_geom()
-    self._event = 1
+    self._event = 0
     self._lastProcessed = 0
     self._hasFile = False
     

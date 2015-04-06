@@ -206,7 +206,8 @@ class evd(QtGui.QWidget):
 
 
         # If there was a file passed on commandline, try to use it:
-        if (sys.argv > 2):
+        # print len(sys.argv)
+        if (len(sys.argv) > 1):
             self._filePath = sys.argv[-1]
             self.initData()
             self.updateDataChoices()
@@ -314,7 +315,6 @@ class evd(QtGui.QWidget):
       self.drawWire(1,1)
 
     def drawBlank(self):
-      print "called draw Blank"
       # d = self._baseData._blankData  
       self._cmap.restoreState(self._blankMapCollection)
       for i in range (0, self._baseData._nviews):
