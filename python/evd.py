@@ -57,7 +57,7 @@ class evd_drawer(pg.GraphicsLayoutWidget):
     def drawRect(self, wire=20, timeStart=20, timeStop=25,brush=(0,0,0)):
         # Draws a rectangle at (x,y,xlength, ylength)
         r1 = pg.QtGui.QGraphicsRectItem(wire, timeStart, 1, timeStop-timeStart)
-        r1.setPen(pg.mkPen('w'))
+        r1.setPen(pg.mkPen(None))
         r1.setBrush(pg.mkColor(brush))
         self._listOfHits.append(r1)
         self._view.addItem(r1)
@@ -146,7 +146,6 @@ class evd(QtGui.QWidget):
         
 
         self._drawRawOption = QtGui.QCheckBox("Draw Raw")
-        self._drawRawOption.setCheckState(True)
         self._drawRawOption.setTristate(False)
         self._drawRawOption.stateChanged.connect(self.rawChoiceChanged)
 
@@ -212,6 +211,7 @@ class evd(QtGui.QWidget):
             self.initData()
             self.updateDataChoices()
             
+
         self.setRangeToMax()
 
         self.updateImage()
@@ -286,12 +286,14 @@ class evd(QtGui.QWidget):
 
     def initData(self):
         self._baseData.set_input_file(self._filePath)
+        print self._baseData._fileInterface.getListOfKeys()
         # check for raw data, make a handle for it if available:
         if 'wire' in self._baseData._fileInterface.getListOfKeys():
             # print "Adding wire data"
             # print self._baseData._fileInterface.getListOfKeys()
             # print self._baseData._fileInterface.getListOfKeys()['wire'][0]
             self._baseData.add_drawing_process('wire',self._baseData._fileInterface.getListOfKeys()['wire'][0])
+            self._drawRawOption.setCheckState(True)
             return
         
         # TODO
@@ -307,6 +309,9 @@ class evd(QtGui.QWidget):
     # What follows are functions to manage the next, prev events etc.
 
     def drawRaw(self):
+      if not 'wire' in self._baseData._daughterProcesses:
+          print "No wire data available to draw!"
+          return
       d = self._baseData._daughterProcesses['wire'].get_img()
       self._cmap.restoreState(self._colorMapCollection)
       for i in range (0, self._baseData._nviews):
@@ -315,10 +320,10 @@ class evd(QtGui.QWidget):
       self.drawWire(1,1)
 
     def drawBlank(self):
-      # d = self._baseData._blankData  
+      d = self._baseData._blankData  
       self._cmap.restoreState(self._blankMapCollection)
       for i in range (0, self._baseData._nviews):
-          # self._drawerList[i]._item.setImage(image=None, scale=self._baseData._aspectRatio)
+          self._drawerList[i]._item.setImage(image=d, scale=self._baseData._aspectRatio)
           self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
 
 
