@@ -10,6 +10,7 @@ class rawDataInterface(object):
   """docstring for rawDataInterface"""
   def __init__(self):
     super(rawDataInterface, self).__init__()
+    gSystem.Load("libEventViewer_RawViewer.so")
     self._process = fmwk.DrawRaw()
     self._producer = ""
     self._nviews=larutil.Geometry.GetME().Nviews()
@@ -41,6 +42,7 @@ class hitInterface(object):
   def __init__(self):
     super(hitInterface, self).__init__()
     # print "In the init function for the hit interface"
+    gSystem.Load("libLArLite_LArUtil")
     self._process = fmwk.DrawHit()
     self._producer = ""
     self._nviews=larutil.Geometry.GetME().Nviews()

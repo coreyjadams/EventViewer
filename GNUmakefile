@@ -30,7 +30,7 @@ SUBDIRS := RawViewer RecoViewer #ADD_NEW_SUBDIR ... do not remove this comment f
 .phony: all clean
 
 all:
-	@for i in $(SUBDIRS); do ( echo "" && echo "Compiling $$i..." && cd $(LARLITE_USERDEVDIR)/EventViewer/$$i && $(MAKE) ) || exit $$?; done
+	@for i in $(SUBDIRS); do ( echo "" && echo "Compiling $$i..." && $(MAKE) -C $(LARLITE_USERDEVDIR)/EventViewer/$$i  ) || exit $$?; done
 #####################################################################################
 #
 # CLEANs...

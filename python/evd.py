@@ -57,7 +57,7 @@ class evd_drawer(pg.GraphicsLayoutWidget):
     def drawRect(self, wire=20, timeStart=20, timeStop=25,brush=(0,0,0)):
         # Draws a rectangle at (x,y,xlength, ylength)
         r1 = pg.QtGui.QGraphicsRectItem(wire, timeStart, 1, timeStop-timeStart)
-        r1.setPen(pg.mkPen(None))
+        r1.setPen(pg.mkPen('w'))
         r1.setBrush(pg.mkColor(brush))
         self._listOfHits.append(r1)
         self._view.addItem(r1)
