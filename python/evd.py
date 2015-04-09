@@ -304,7 +304,7 @@ class evd(QtGui.QWidget):
         # print "Hits choice changed to ", text
         if 'cluster' in self._baseData._fileInterface.getListOfKeys():
             if text in self._baseData._fileInterface.getListOfKeys()['cluster']:
-                print "Trying to add the clusters process ..."
+                # print "Trying to add the clusters process ..."
                 self._baseData.add_drawing_process('cluster',text)
             else:
                 self._baseData.remove_drawing_process('cluster')
