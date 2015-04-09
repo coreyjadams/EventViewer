@@ -6,6 +6,13 @@ import pyqtgraph as pg
 from dataInterface import *
 
 
+# Making notes here of things that need to be addressed:
+# The scale setting might disturb the aspect ratio
+# The range (in t/y) is set by hand and needs to be read from larutil
+# Same with range in w/x
+# The time to cm and wire to cm conversions also need to be read in
+
+
 class evd_drawer(pg.GraphicsLayoutWidget):
     def __init__(self):
         super(evd_drawer, self).__init__()
@@ -20,19 +27,31 @@ class evd_drawer(pg.GraphicsLayoutWidget):
         self.scene().sigMouseMoved.connect(self.mouseMoved)
         self._plane = -1
         self._listOfHits = []
-
+        self._cmSpace = False
+        self._wire2cm = 0.4
+        self._time2cm = 0.2
+        self._wRange  = 240
+        self._tRange  = 2000 
 
     def mouseMoved(self, pos):
         self.q = self._item.mapFromScene(pos)
         # print q.x()
         message= QtCore.QString()
-        message.append("Wire: ")
-        message.append(str(int(self.q.x())))
-        message.append(", Time: ")
-        message.append(str(int(self.q.y())))
+        if self._cmSpace:
+            message.append("X: ")
+            message.append("{0:.1f}".format(self.q.x()*self._wire2cm))
+        else:
+            message.append("W: ")
+            message.append(str(int(self.q.x())))
+        if self._cmSpace:
+            message.append(", Y: ")
+            message.append("{0:.1f}".format(self.q.y()*self._time2cm))
+        else:
+            message.append(", T: ")
+            message.append(str(int(self.q.y())))
         # print message
-        if self.q.x() > 0 and self.q.x() < 240:
-            if self.q.y() > 0 and self.q.y() < 2000:
+        if self.q.x() > 0 and self.q.x() < self._wRange:
+            if self.q.y() > 0 and self.q.y() < self._tRange:
                 self.statusBar.showMessage(message)
 
     def mouseClicked(self, event):
@@ -57,6 +76,12 @@ class evd_drawer(pg.GraphicsLayoutWidget):
     def drawRect(self, wire=20, timeStart=20, timeStop=25,brush=(0,0,0)):
         # Draws a rectangle at (x,y,xlength, ylength)
         r1 = pg.QtGui.QGraphicsRectItem(wire, timeStart, 1, timeStop-timeStart)
+
+        # # New Way
+        # r1.setPen(pg.mkPen(brush,width=2))
+        # # r1.setBrush(pg.mkColor((255,255,255)))
+
+        # Old Way:
         r1.setPen(pg.mkPen(None))
         r1.setBrush(pg.mkColor(brush))
         self._listOfHits.append(r1)
@@ -149,6 +174,10 @@ class evd(QtGui.QWidget):
         self._drawRawOption.setTristate(False)
         self._drawRawOption.stateChanged.connect(self.rawChoiceChanged)
 
+        self._unitDisplayOption = QtGui.QCheckBox("Use cm")
+        self._unitDisplayOption.setTristate(False)
+        self._unitDisplayOption.stateChanged.connect(self.unitChoicedChanged)
+
         # Add labels for the hits and clusters:
         # Set up the labels that hold the data:
         self.initDataChoices()
@@ -159,6 +188,7 @@ class evd(QtGui.QWidget):
         self._controlBox.addWidget(self._drawRawOption)
 
         self._controlBox.addStretch(1)
+        self._controlBox.addWidget(self._unitDisplayOption)
         self._controlBox.addWidget(self._quitButton)
 
         # Add a status bar for information purposes:
@@ -175,6 +205,8 @@ class evd(QtGui.QWidget):
             # print 
             # add it to the layout:
             self._dataBox.addWidget(self._drawerList[-1], 2*i,1,1,1)
+            self._drawerList[-1]._wRange = self._baseData._wRange
+            self._drawerList[-1]._tRange = self._baseData._tRange
             self._drawerList[-1].connectStatusBar(self.statusBar)
             self._drawerList[-1]._plane = i
 
@@ -283,6 +315,16 @@ class evd(QtGui.QWidget):
             self.drawRaw()
         else:
             self.drawBlank()       
+
+    def unitChoicedChanged(self):
+        if self._unitDisplayOption.isChecked():
+            for i in range (0, self._baseData._nviews):
+                self._drawerList[i]._cmSpace = True;
+                self._drawerList[i]._wire2cm = self._baseData._wire2Cm
+                self._drawerList[i]._time2cm = self._baseData._time2Cm
+        else:
+            for i in range (0, self._baseData._nviews):
+                self._drawerList[i]._cmSpace = False;           
 
     def initData(self):
         self._baseData.set_input_file(self._filePath)
@@ -402,10 +444,11 @@ class evd(QtGui.QWidget):
         # print
 
     def setRangeToMax(self):
+      xR = (0,self._baseData._wRange)
+      yR = (0,self._baseData._tRange)
       for i in range (0, self._baseData._nviews):
-        self._drawerList[i]._view.setRange(xRange=(0,240),yRange=(0,1600), padding=0)
-        # self._views[i].setXRange(0,240)
-        # self._views[i].setYRange(0,2400)
+        self._drawerList[i]._view.setRange(xRange=xR,yRange=yR, padding=0)
+
 
     def selectFile(self):
         self._filePath = str(QtGui.QFileDialog.getOpenFileName())

@@ -27,7 +27,7 @@ class rawDataInterface(object):
   def get_wire(self, plane, wire):
     if plane > self._nviews:
       return
-    if wire > 0 and wire < 240:
+    if wire > 0 and wire < larutil.Geometry.GetME().Nwires(plane):
       return np.array(self._c2p.Convert(self._process.getWireData(plane,wire)))
 
   def setProducer(self, prod):
@@ -107,7 +107,8 @@ class baseDataInterface(object):
     self._fileInterface = fileInterface()
     if argo:
       self.config_argo()
-    self.init_geom()
+    else:
+      self.init_geom()
     self._event = 0
     self._lastProcessed = 0
     self._hasFile = False
@@ -117,8 +118,15 @@ class baseDataInterface(object):
     self._daughterProcesses = dict()
 
   def init_geom(self):
-    self._aspectRatio = larutil.GeometryUtilities.GetME().TimeToCm() / larutil.GeometryUtilities.GetME().WireToCm()
     self._nviews=larutil.Geometry.GetME().Nviews()
+    # Get the conversions
+    self._time2Cm = larutil.GeometryUtilities.GetME().TimeToCm()
+    self._wire2Cm = larutil.GeometryUtilities.GetME().WireToCm()
+    self._aspectRatio = self._time2Cm / self._wire2Cm
+    # Get the ranges:
+    self._wRange = larutil.Geometry.GetME().Nwires(0)
+    self._tRange = larutil.DetectorProperties.GetME().ReadOutWindowSize()
+
     # self.xmin
   
   def config_argo(self):
