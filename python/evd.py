@@ -364,6 +364,7 @@ class evd(QtGui.QWidget):
     def clearDrawnProducts(self):
         for view in range(0,self._baseData._nviews):
             self._drawerList[view].clearHits()
+            self._drawerList[view].clearClusters()
 
     def nextEvent(self):
       self._baseData._event += 1

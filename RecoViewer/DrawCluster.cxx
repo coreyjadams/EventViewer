@@ -105,38 +105,44 @@ namespace larlite {
     // Loop over the clusters and fill the necessary vectors.  
     // I don't know how clusters are stored so I'm taking a conservative
     // approach to packaging them for drawing
-    int cluster_index = 0;
+    std::vector<int> cluster_index;
+    cluster_index.resize(geoService -> Nviews());
     auto ass_info = ev_clus->association(ev_hit->id());
     int view = ev_hit->at(ass_info.front()[0]).View();
     std::vector<int>  nullIntVec;
     std::vector<float>  nullFltVec;
     for(auto const& hit_indices : ass_info) {
-      if (view != ev_hit->at(hit_indices[0]).View()){
-        view = ev_hit->at(hit_indices[0]).View();
-        cluster_index = 0;
-      }
+      view = ev_hit->at(hit_indices[0]).View();
       for(auto const& hit_index : hit_indices){
-        // std::cout << "Got a hit, seems to be view " << view
-        //           << " and cluster " << cluster_index << std::endl;
-        
-        if ((int)wireByPlaneByCluster -> at(view).size() != cluster_index-1){
+        // if (view == 0){
+        //   std::cout << "Got a hit, seems to be view " << view
+        //             << " and cluster " << cluster_index[view] 
+        //             << " at " << ev_hit->at(hit_index).Wire()
+        //             << ", " << ev_hit->at(hit_index).PeakTime()
+        //             << std::endl;
+        // }
+
+        if ((int)wireByPlaneByCluster -> at(view).size() != cluster_index[view]-1){
           wireByPlaneByCluster -> at(view).push_back(nullIntVec);
         }
-        wireByPlaneByCluster -> at(view).at(cluster_index).push_back(ev_hit->at(hit_index).Wire());
+        wireByPlaneByCluster -> at(view).at(cluster_index[view]).push_back(ev_hit->at(hit_index).Wire());
         
-        if ((int)hitStartByPlaneByCluster -> at(view).size() != cluster_index-1){
+        if ((int)hitStartByPlaneByCluster -> at(view).size() != cluster_index[view]-1){
           hitStartByPlaneByCluster -> at(view).push_back(nullFltVec);
         }
-        hitStartByPlaneByCluster -> at(view).at(cluster_index).push_back(ev_hit->at(hit_index).StartTime());
+        hitStartByPlaneByCluster -> at(view).at(cluster_index[view]).push_back(ev_hit->at(hit_index).StartTime());
         
-        if ((int)hitEndByPlaneByCluster -> at(view).size() != cluster_index-1){
+        if ((int)hitEndByPlaneByCluster -> at(view).size() != cluster_index[view]-1){
           hitEndByPlaneByCluster -> at(view).push_back(nullFltVec);
         }
-        hitEndByPlaneByCluster -> at(view).at(cluster_index).push_back(ev_hit->at(hit_index).EndTime());
+        hitEndByPlaneByCluster -> at(view).at(cluster_index[view]).push_back(ev_hit->at(hit_index).EndTime());
       }
-      cluster_index ++;
+      if (view == 0 ) std::cout << std::endl;
+      cluster_index[view] ++;
     }
     
+    std::cout << "\n\n\n";
+
     return true;
   }
 
