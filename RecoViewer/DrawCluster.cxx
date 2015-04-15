@@ -79,6 +79,10 @@ namespace larlite {
     if(!(associated_hit_producers.size()))
       return false;
 
+    // for (auto & key : associated_hit_producers){
+    //   std::cout << "Found this associated_hit_producer: " << key << std::endl;
+    // }
+
     auto ev_hit  = storage->get_data<event_hit>(associated_hit_producers[0]);
 
     if(!ev_hit){

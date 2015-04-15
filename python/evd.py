@@ -8,10 +8,11 @@ from dataInterface import *
 
 # Making notes here of things that need to be addressed:
 # The scale setting might disturb the aspect ratio
-# The range (in t/y) is set by hand and needs to be read from larutil
-# Same with range in w/x
-# The time to cm and wire to cm conversions also need to be read in
-
+# Seems to be a small bug when zooming in, making wires offset.
+# Add other 2d reco objects: vertex, mctrack/mcshower.  Print mctruth
+# hit enter to go to the next event
+#   --- even better: bind keys to buttons
+# automatically zoom to the region of interest
 
 class evd_drawer(pg.GraphicsLayoutWidget):
     def __init__(self):
@@ -101,16 +102,24 @@ class evd_drawer(pg.GraphicsLayoutWidget):
     def connectWireDrawFunction(self, func):
         self._wdf = func
 
-class dataHandler(QtGui.QWidget):
-    """docstring for dataHandler
-        This class connects the different types of data to
-        the different drawers, and is in charge of updating the options
-        to draw
-    """
+
+class ComboBoxWithKeyConnect(QtGui.QComboBox):
+
     def __init__(self):
-        super(dataHandler, self).__init__()
+        super(ComboBoxWithKeyConnect,self).__init__()
 
+    def connectOwnerKPE(self, kpe):
+        self._owner_KPE = kpe
 
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_N:
+            self._owner_KPE(e)
+            pass
+        if e.key() == QtCore.Qt.Key_P:
+            self._owner_KPE(e)
+            pass
+        else:
+            super(ComboBoxWithKeyConnect,self).keyPressEvent(e)
 
 class evd(QtGui.QWidget):
 
@@ -119,7 +128,7 @@ class evd(QtGui.QWidget):
         super(evd, self).__init__()
         # self._filePath = "/media/cadams/data_linux/argoneut_mc/nue_larlite_all.root"
         self._filePath = ""
-        self._baseData = baseDataInterface()
+        self._baseData = baseDataInterface(argo=True)
         self.initUI()
 
     def initUI(self):
@@ -251,8 +260,16 @@ class evd(QtGui.QWidget):
     def initDataChoices(self):
         # Create a tuple of options and their labels
         # Add the raw, clusters, and hits:
-        self._dataListsAndLabels = {'Hits': QtGui.QComboBox(), 'HitsLabel': QtGui.QLabel("Hits:") }
-        self._dataListsAndLabels.update({'Clusters': QtGui.QComboBox(), 'ClustersLabel': QtGui.QLabel("Clusters:") })
+        self._dataListsAndLabels = {
+                'Hits': ComboBoxWithKeyConnect(), 
+                'HitsLabel': QtGui.QLabel("Hits:") }
+        self._dataListsAndLabels['Hits'].connectOwnerKPE(self.keyPressEvent)
+
+        self._dataListsAndLabels.update({
+                'Clusters': ComboBoxWithKeyConnect(), 
+                'ClustersLabel': QtGui.QLabel("Clusters:") })
+        self._dataListsAndLabels['Clusters'].connectOwnerKPE(self.keyPressEvent)
+
 
         self._dataListsAndLabels['Hits'].addItem("--None--")
         self._dataListsAndLabels['Clusters'].addItem("--None--")
@@ -328,7 +345,7 @@ class evd(QtGui.QWidget):
 
     def initData(self):
         self._baseData.set_input_file(self._filePath)
-        print self._baseData._fileInterface.getListOfKeys()
+        # print self._baseData._fileInterface.getListOfKeys()
         # check for raw data, make a handle for it if available:
         if 'wire' in self._baseData._fileInterface.getListOfKeys():
             # print "Adding wire data"
@@ -455,6 +472,23 @@ class evd(QtGui.QWidget):
         self.initData()
         self.updateDataChoices()
         self.updateImage()
+
+    def keyPressEvent(self,e):
+        # print "A key was pressed!"
+        # print e.key()
+        if e.key() == QtCore.Qt.Key_N:
+            self.nextEvent()
+        if e.key() == QtCore.Qt.Key_P:
+            self.prevEvent()
+
+        if e.key() == QtCore.Qt.Key_C:
+            self._dataListsAndLabels['Clusters'].setFocus()
+        if e.key() == QtCore.Qt.Key_H:
+            self._dataListsAndLabels['Hits'].setFocus()
+
+    def keyPressInterrupt(self,e):
+        print "Interrupting function!"
+
 
 def main():
     
