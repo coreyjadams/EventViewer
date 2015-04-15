@@ -137,11 +137,9 @@ namespace larlite {
         }
         hitEndByPlaneByCluster -> at(view).at(cluster_index[view]).push_back(ev_hit->at(hit_index).EndTime());
       }
-      if (view == 0 ) std::cout << std::endl;
       cluster_index[view] ++;
     }
     
-    std::cout << "\n\n\n";
 
     return true;
   }
