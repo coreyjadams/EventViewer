@@ -2,6 +2,11 @@
 
 # This section of code determines where the evd is stored.
 
+if [ -z ${LARLITE_BASEDIR+x} ]; then 
+  echo "Must set up larlite to use this!";
+  return 
+fi
+
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
   DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"

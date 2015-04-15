@@ -125,7 +125,7 @@ namespace larlite {
   
   const std::vector<int> & DrawHit::getWireByPlane(unsigned int p) const{
     static std::vector<int> returnNull;
-    if (p >= geoService->Nviews() || p < 0){
+    if (p >= geoService->Nviews() ){
       std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
       return returnNull;
     }
@@ -141,7 +141,7 @@ namespace larlite {
 
   const std::vector<float> & DrawHit::getHitStartByPlane(unsigned int p) const{
     static std::vector<float> returnNull;
-    if (p >= geoService->Nviews() || p < 0){
+    if (p >= geoService->Nviews() ){
       std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
       return returnNull;
     }
@@ -157,7 +157,7 @@ namespace larlite {
 
   const std::vector<float> & DrawHit::getHitEndByPlane(unsigned int p) const{
     static std::vector<float> returnNull;
-    if (p >= geoService->Nviews() || p < 0){
+    if (p >= geoService->Nviews() ){
       std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
       return returnNull;
     }

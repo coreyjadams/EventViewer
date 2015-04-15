@@ -14,6 +14,21 @@ from drawingInterface import *
 #   --- even better: bind keys to buttons!
 # automatically zoom to the region of interest
 
+# Current list of features:
+# Draws hits, clusters, wires
+# Zoom in and out of the image with scrolling, click and drag to pan
+# Click on an image to draw the wire the mouse clicked on, if wire data available
+# use the max range button to set the view to the whole readout and wire set
+# select file will let you choose a file to open
+# With clusters drawn, hover the mouse over a cluster to highlight it
+#   double click sets the highlight to stick, double click again to undo it
+# Hot Keys:
+#  n - next event
+#  p - prev event
+#  c - set focus to clusters
+#  h - set focus to hits
+
+
 
 class ComboBoxWithKeyConnect(QtGui.QComboBox):
 

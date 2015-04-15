@@ -119,17 +119,17 @@ namespace larlite {
         // std::cout << "Got a hit, seems to be view " << view
         //           << " and cluster " << cluster_index << std::endl;
         
-        if (wireByPlaneByCluster -> at(view).size() != cluster_index-1){
+        if ((int)wireByPlaneByCluster -> at(view).size() != cluster_index-1){
           wireByPlaneByCluster -> at(view).push_back(nullIntVec);
         }
         wireByPlaneByCluster -> at(view).at(cluster_index).push_back(ev_hit->at(hit_index).Wire());
         
-        if (hitStartByPlaneByCluster -> at(view).size() != cluster_index-1){
+        if ((int)hitStartByPlaneByCluster -> at(view).size() != cluster_index-1){
           hitStartByPlaneByCluster -> at(view).push_back(nullFltVec);
         }
         hitStartByPlaneByCluster -> at(view).at(cluster_index).push_back(ev_hit->at(hit_index).StartTime());
         
-        if (hitEndByPlaneByCluster -> at(view).size() != cluster_index-1){
+        if ((int)hitEndByPlaneByCluster -> at(view).size() != cluster_index-1){
           hitEndByPlaneByCluster -> at(view).push_back(nullFltVec);
         }
         hitEndByPlaneByCluster -> at(view).at(cluster_index).push_back(ev_hit->at(hit_index).EndTime());
@@ -167,7 +167,7 @@ namespace larlite {
   }
 
   int DrawCluster::getNClustersByPlane(unsigned int p) const{
-      if (p >= geoService->Nviews() || p < 0){
+      if (p >= geoService->Nviews() ){
         std::cerr << "ERROR: Request for nonexistent plane " << p << std::endl;
         return 0;
       }
@@ -182,7 +182,7 @@ namespace larlite {
   const std::vector<int>   & 
     DrawCluster::getWireByPlaneAndCluster(unsigned int p, unsigned int c) const{
       static std::vector<int> returnNull;
-      if (p >= geoService->Nviews() || p < 0){
+      if (p >= geoService->Nviews() ){
         std::cerr << "ERROR: Request for nonexistent plane " << p << std::endl;
         return returnNull;
       }
@@ -202,7 +202,7 @@ namespace larlite {
   const std::vector<float> & 
     DrawCluster::getHitStartByPlaneAndCluster(unsigned int p, unsigned int c) const{
       static std::vector<float> returnNull;
-      if (p >= geoService->Nviews() || p < 0){
+      if (p >= geoService->Nviews() ){
         std::cerr << "ERROR: Request for nonexistent plane " << p << std::endl;
         return returnNull;
       }
@@ -222,7 +222,7 @@ namespace larlite {
   const std::vector<float> & 
     DrawCluster::getHitEndByPlaneAndCluster(unsigned int p, unsigned int c) const{
       static std::vector<float> returnNull;
-      if (p >= geoService->Nviews() || p < 0){
+      if (p >= geoService->Nviews() ){
         std::cerr << "ERROR: Request for nonexistent plane " << p << std::endl;
         return returnNull;
       }
