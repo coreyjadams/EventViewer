@@ -4,103 +4,15 @@ import sys
 from PyQt4 import QtGui, QtCore
 import pyqtgraph as pg
 from dataInterface import *
-
+from drawingInterface import *
 
 # Making notes here of things that need to be addressed:
 # The scale setting might disturb the aspect ratio
 # Seems to be a small bug when zooming in, making wires offset.
 # Add other 2d reco objects: vertex, mctrack/mcshower.  Print mctruth
 # hit enter to go to the next event
-#   --- even better: bind keys to buttons
+#   --- even better: bind keys to buttons!
 # automatically zoom to the region of interest
-
-class evd_drawer(pg.GraphicsLayoutWidget):
-    def __init__(self):
-        super(evd_drawer, self).__init__()
-        # add a view box, which is a widget that allows an image to be shown
-        self._view = self.addViewBox()
-        # add an image item which handles drawing (and refreshing) the image
-        self._item = pg.ImageItem()
-        self._view.addItem(self._item)
-        # connect the scene to click events, used to get wires
-        self.scene().sigMouseClicked.connect(self.mouseClicked)
-        # connect the views to mouse move events, used to update the info box at the bottom
-        self.scene().sigMouseMoved.connect(self.mouseMoved)
-        self._plane = -1
-        self._listOfHits = []
-        self._cmSpace = False
-        self._wire2cm = 0.4
-        self._time2cm = 0.2
-        self._wRange  = 240
-        self._tRange  = 2000 
-
-    def mouseMoved(self, pos):
-        self.q = self._item.mapFromScene(pos)
-        # print q.x()
-        message= QtCore.QString()
-        if self._cmSpace:
-            message.append("X: ")
-            message.append("{0:.1f}".format(self.q.x()*self._wire2cm))
-        else:
-            message.append("W: ")
-            message.append(str(int(self.q.x())))
-        if self._cmSpace:
-            message.append(", Y: ")
-            message.append("{0:.1f}".format(self.q.y()*self._time2cm))
-        else:
-            message.append(", T: ")
-            message.append(str(int(self.q.y())))
-        # print message
-        if self.q.x() > 0 and self.q.x() < self._wRange:
-            if self.q.y() > 0 and self.q.y() < self._tRange:
-                self.statusBar.showMessage(message)
-
-    def mouseClicked(self, event):
-        # print self
-        # print event
-        # print event.pos()
-        # Get the Mouse position and print it:
-        # print "Image position:", self.q.x()
-        # use this method to try drawing rectangles
-        # self.drawRect()
-        # pdi.plot()
-        # For this function, a click should get the wire that is
-        # being hovered over and draw it at the bottom
-        wire = int( self._item.mapFromScene(event.pos()).x())
-        # print "Plane: " + str(self._plane) + ", Wire: " + str(wire)
-        self._wdf(self._plane,wire)
-        # return self.plane,self.wire
-
-    def connectStatusBar(self, statusBar):
-        self.statusBar = statusBar
-
-    def drawRect(self, wire=20, timeStart=20, timeStop=25,brush=(0,0,0)):
-        # Draws a rectangle at (x,y,xlength, ylength)
-        r1 = pg.QtGui.QGraphicsRectItem(wire, timeStart, 1, timeStop-timeStart)
-
-        # # New Way
-        # r1.setPen(pg.mkPen(brush,width=2))
-        # # r1.setBrush(pg.mkColor((255,255,255)))
-
-        # Old Way:
-        r1.setPen(pg.mkPen(None))
-        r1.setBrush(pg.mkColor(brush))
-        self._listOfHits.append(r1)
-        self._view.addItem(r1)
-        return r1
-
-    def clearHits(self):
-        for hit in self._listOfHits:
-            self._view.removeItem(hit)
-        self._listOfHits = []
-
-    def clearClusters(self):
-        for hit in self._listOfHits:
-            self._view.removeItem(hit)
-        self._listOfHits = []        
-
-    def connectWireDrawFunction(self, func):
-        self._wdf = func
 
 
 class ComboBoxWithKeyConnect(QtGui.QComboBox):
@@ -396,22 +308,19 @@ class evd(QtGui.QWidget):
         # print self._baseData._daughterProcesses.keys()
         for view in range(0,self._baseData._nviews):
             hits = self._baseData._daughterProcesses['hit'].get_hits(view)
-            for hitIndex in range(0, len(hits[0])):
-                self._drawerList[view].drawRect(hits[0][hitIndex], hits[1][hitIndex],hits[2][hitIndex])
+            self._drawerList[view].drawHits(hits)
+
+            # print hits[0]
+            # for hitIndex in range(0, len(hits[0])):
+                # self._drawerList[view].drawRect(hits[0][hitIndex], hits[1][hitIndex],hits[2][hitIndex])
 
     def drawClusters(self):
         procs = self._baseData._daughterProcesses
-        colors = self._baseData._daughterProcesses['cluster']._clusterColors
         # print procs.keys()
         for view in range(0,self._baseData._nviews):
-            colorIndex = 0
-            for cluster in range(0, procs['cluster'].get_n_clusters(view)):
-                h = procs['cluster'].get_hits(view,cluster)
-                for hitIndex in range(0, len(h[0])):
-                    self._drawerList[view].drawRect(h[0][hitIndex], h[1][hitIndex],h[2][hitIndex],colors[colorIndex])
-                colorIndex += 1
-                if colorIndex >= len(colors):
-                    colorIndex = 0
+            clusters = procs['cluster'].get_clusters(view)
+            self._drawerList[view].drawClusters(clusters)
+
 
     def updateImage(self):
         drawn = False
@@ -485,6 +394,9 @@ class evd(QtGui.QWidget):
             self._dataListsAndLabels['Clusters'].setFocus()
         if e.key() == QtCore.Qt.Key_H:
             self._dataListsAndLabels['Hits'].setFocus()
+
+        if e.key() == QtCore.Qt.Key_R:
+            self.setRangeToMax()
 
     def keyPressInterrupt(self,e):
         print "Interrupting function!"

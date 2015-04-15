@@ -72,24 +72,13 @@ class clusterInterface(object):
     self._producer = ""
     self._nviews=larutil.Geometry.GetME().Nviews()
     self._c2p = fmwk.Converter()
-    self._clusterColors = [ 
-                            # (0,255,255),  # teal - too close to wire colors
-                            (0,147,147),  # dark teal
-                            (0,0,252),   # bright blue
-                            # (0,0,100), # navy blue - not great
-                            (156,0,156), # purple
-                            (255,0,255), # pink
-                            (255,0,0),  #red
-                            (175,0,0),  #red/brown
-                            (252,127,0), # orange
-                            (102,51,0), # brown
-                            (127,127,127),  # dark gray
-                            (210,210,210),  # gray
-                            # (0,147,0), # medium green
-                            (100,253,0) # bright green
-                            ]
 
-
+  def get_clusters(self,view):
+    # return a packaged up set of all the clusters
+    clusters = []
+    for clust in range(0, self.get_n_clusters(view)):
+      clusters.append(self.get_hits(view,clust))
+    return clusters
 
   def get_hits(self, view, cluster):
     h = []
