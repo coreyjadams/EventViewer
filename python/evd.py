@@ -19,6 +19,8 @@ from drawingInterface import *
 #  -> Want to add option to set range to max, auto range
 #  -> Also want to be able to lock x,y axes to the correct aspect ratio.
 #       -> can use view.setAspectLocked(True, ratio=aspectRatio)
+# Want to be able to toggle on or off the wire display
+
 
 # Current list of features:
 # Draws hits, clusters, wires
@@ -93,6 +95,8 @@ class evd(QtGui.QWidget):
         self._autoRangeButton.stateChanged.connect(self.autoRange)
         self._lockAspectRatio = QtGui.QCheckBox("Lock A.R.")
         self._lockAspectRatio.stateChanged.connect(self.lockAspectRatio)
+        self._drawWireOption = QtGui.QCheckBox("Wire Drawing")
+        self._drawWireOption.stateChanged.connect(self.drawWireOption)
 
         # ColorMap used to color data:
         self._cmap = pg.GradientWidget(orientation='top')
@@ -136,6 +140,7 @@ class evd(QtGui.QWidget):
         self._eventControlBox.addWidget(self._maxRangeButton)
         self._eventControlBox.addWidget(self._autoRangeButton)
         self._eventControlBox.addWidget(self._lockAspectRatio)
+        self._eventControlBox.addWidget(self._drawWireOption)
         self._eventControlBox.addStretch(1)
 
         self._eventControlBox.addWidget(self._unitDisplayOption)
@@ -162,7 +167,7 @@ class evd(QtGui.QWidget):
 
         # Make an extra space for wires:
         self._drawerList.append(pg.GraphicsLayoutWidget())
-        self._dataBox.addWidget(self._drawerList[-1])
+        # self._dataBox.addWidget(self._drawerList[-1])
         # self._dataBox.addWidget(self._drawerList[-1],2*nviews+1,1,2,1)
         
         self._wirePlot = self._drawerList[-1].addPlot()
@@ -435,6 +440,11 @@ class evd(QtGui.QWidget):
             for v in range(0, self._baseData._nviews):
                 self._drawerList[v]._view.setAspectLocked(False)
 
+    def drawWireOption(self):
+        if self._drawWireOption.isChecked():
+            self._dataBox.addWidget(self._drawerList[-1])
+        else:
+            self._dataBox.removeWidget(self._drawerList[-1])
 
     def selectFile(self):
         self._filePath = str(QtGui.QFileDialog.getOpenFileName())
