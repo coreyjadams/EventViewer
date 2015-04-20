@@ -92,7 +92,7 @@ class evd(QtGui.QWidget):
         self._autoRangeButton.setTristate(False)
         self._autoRangeButton.stateChanged.connect(self.autoRange)
         self._lockAspectRatio = QtGui.QCheckBox("Lock A.R.")
-
+        self._lockAspectRatio.stateChanged.connect(self.lockAspectRatio)
 
         # ColorMap used to color data:
         self._cmap = pg.GradientWidget(orientation='top')
@@ -423,7 +423,17 @@ class evd(QtGui.QWidget):
                 return
             for v in range(0, self._baseData._nviews):
                 xR,yR = procs['cluster'].get_range(v)
-                self._drawerList[v]._view.setRange(xRange=xR,yRange=yR, padding=0)
+                self._drawerList[v]._view.setRange(xRange=xR,yRange=yR, padding=0.05)
+
+    def lockAspectRatio(self):
+        if self._lockAspectRatio.isChecked():
+            ratio = 1.0/self._baseData._aspectRatio
+            for v in range(0, self._baseData._nviews):
+                self._drawerList[v]._view.setAspectLocked(True, ratio=ratio)
+            # self.
+        else:
+            for v in range(0, self._baseData._nviews):
+                self._drawerList[v]._view.setAspectLocked(False)
 
 
     def selectFile(self):
