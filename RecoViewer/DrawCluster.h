@@ -56,6 +56,9 @@ namespace larlite {
     const std::vector<float> & getHitStartByPlaneAndCluster(unsigned int p, unsigned int c) const;
     const std::vector<float> & getHitEndByPlaneAndCluster(unsigned int p, unsigned int c) const;
 
+    std::vector<float> GetWireRange(unsigned int p);
+    std::vector<float> GetTimeRange(unsigned int p);
+
   protected:
     
   private:
@@ -74,6 +77,12 @@ namespace larlite {
     std::vector<std::vector<std::vector<float> > > * hitStartByPlaneByCluster;
     std::vector<std::vector<std::vector<float> > > * hitEndByPlaneByCluster;
 
+    // Store the bounding parameters of interest:
+    // highest and lowest wire, highest and lowest time
+    // Have to sort by plane still
+
+    std::vector<std::vector<float> > wireRange;
+    std::vector<std::vector<float> > timeRange;
 
   };
 }

@@ -4,12 +4,15 @@
 #include "DrawCluster.h"
 #include "DataFormat/hit.h"
 #include "DataFormat/cluster.h"
+#include "LArUtil/DetectorProperties.h"
 
 namespace larlite {
 
   DrawCluster::DrawCluster(){
     _name="DrawCluster";
     _fout=0;
+
+
 
     wireByPlaneByCluster     
       = new std::vector<std::vector<std::vector<int > > >;
@@ -31,6 +34,8 @@ namespace larlite {
     // Initialize the geoService object:
     geoService = larutil::Geometry::GetME();
 
+    wireRange.resize(geoService -> Nviews());
+    timeRange.resize(geoService -> Nviews());
 
     // Resize data holder to accomodate planes and wires:
     if (wireByPlaneByCluster -> size() != geoService -> Nviews()){
@@ -91,8 +96,13 @@ namespace larlite {
                 << "!" << std::endl;
       return false;
     }
+
+    auto detProp = larutil::DetectorProperties::GetME();
+    
+
     // Clear out the hit data but reserve some space for the hits
     for (unsigned int p = 0; p < geoService -> Nviews(); p ++){
+
       wireByPlaneByCluster     ->at(p).clear();
       hitStartByPlaneByCluster ->at(p).clear();
       hitEndByPlaneByCluster   ->at(p).clear();
@@ -100,7 +110,18 @@ namespace larlite {
       wireByPlaneByCluster     ->at(p).reserve(ev_clus->size());
       hitStartByPlaneByCluster ->at(p).reserve(ev_clus->size());
       hitEndByPlaneByCluster   ->at(p).reserve(ev_clus->size());
+      
+      wireRange.at(p).resize(2);
+      timeRange.at(p).resize(2);
+
+      // Reset the bounding items for this event:
+      wireRange.at(p).at(0) = geoService -> Nwires(p);
+      wireRange.at(p).at(1) = 0;
+      timeRange.at(p).at(0) = detProp -> NumberTimeSamples();
+      timeRange.at(p).at(1) = 0;
+    
     }
+
 
     // Loop over the clusters and fill the necessary vectors.  
     // I don't know how clusters are stored so I'm taking a conservative
@@ -125,17 +146,33 @@ namespace larlite {
         if ((int)wireByPlaneByCluster -> at(view).size() != cluster_index[view]-1){
           wireByPlaneByCluster -> at(view).push_back(nullIntVec);
         }
-        wireByPlaneByCluster -> at(view).at(cluster_index[view]).push_back(ev_hit->at(hit_index).Wire());
+        wireByPlaneByCluster 
+          -> at(view).at(cluster_index[view]).push_back(
+            ev_hit->at(hit_index).Wire());
         
         if ((int)hitStartByPlaneByCluster -> at(view).size() != cluster_index[view]-1){
           hitStartByPlaneByCluster -> at(view).push_back(nullFltVec);
         }
-        hitStartByPlaneByCluster -> at(view).at(cluster_index[view]).push_back(ev_hit->at(hit_index).StartTime());
+        hitStartByPlaneByCluster 
+          -> at(view).at(cluster_index[view]).push_back(ev_hit->at(hit_index).StartTime());
         
         if ((int)hitEndByPlaneByCluster -> at(view).size() != cluster_index[view]-1){
           hitEndByPlaneByCluster -> at(view).push_back(nullFltVec);
         }
-        hitEndByPlaneByCluster -> at(view).at(cluster_index[view]).push_back(ev_hit->at(hit_index).EndTime());
+        hitEndByPlaneByCluster 
+          -> at(view).at(cluster_index[view]).push_back(
+            ev_hit->at(hit_index).EndTime());
+
+        // Determine if this hit should change the view range:
+        if (ev_hit->at(hit_index).Wire() > wireRange.at(view).at(1))
+          wireRange.at(view).at(1) = ev_hit->at(hit_index).Wire();
+        if (ev_hit->at(hit_index).Wire() < wireRange.at(view).at(0))
+          wireRange.at(view).at(0) = ev_hit->at(hit_index).Wire();
+        if (ev_hit->at(hit_index).PeakTime() > timeRange.at(view).at(1))
+          timeRange.at(view).at(1) = ev_hit->at(hit_index).PeakTime();
+        if (ev_hit->at(hit_index).PeakTime() < timeRange.at(view).at(0))
+          timeRange.at(view).at(0) = ev_hit->at(hit_index).PeakTime();
+
       }
       cluster_index[view] ++;
     }
@@ -244,7 +281,24 @@ namespace larlite {
       }
     }
 
-
+    std::vector<float> DrawCluster::GetWireRange(unsigned int p){
+      static std::vector<float> returnNull;
+      if (p >= geoService->Nviews() ){
+        std::cerr << "ERROR: Request for nonexistent plane " << p << std::endl;
+        return returnNull;
+      }
+      else 
+        return wireRange.at(p);
+    }
+    std::vector<float> DrawCluster::GetTimeRange(unsigned int p){
+      static std::vector<float> returnNull;
+      if (p >= geoService->Nviews() ){
+        std::cerr << "ERROR: Request for nonexistent plane " << p << std::endl;
+        return returnNull;
+      }
+      else 
+        return timeRange.at(p);
+    }
 
 }
 #endif

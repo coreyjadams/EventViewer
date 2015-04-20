@@ -12,7 +12,13 @@ from drawingInterface import *
 # Add other 2d reco objects: vertex, mctrack/mcshower.  Print mctruth
 # hit enter to go to the next event
 #   --- even better: bind keys to buttons!
+# Show run, event number and ability to jump to events
+
+# Semi implemented:
 # automatically zoom to the region of interest
+#  -> Want to add option to set range to max, auto range
+#  -> Also want to be able to lock x,y axes to the correct aspect ratio.
+#       -> can use view.setAspectLocked(True, ratio=aspectRatio)
 
 # Current list of features:
 # Draws hits, clusters, wires
@@ -55,7 +61,7 @@ class evd(QtGui.QWidget):
         super(evd, self).__init__()
         # self._filePath = "/media/cadams/data_linux/argoneut_mc/nue_larlite_all.root"
         self._filePath = ""
-        self._baseData = baseDataInterface(argo=True)
+        self._baseData = baseDataInterface(argo=False)
         self.initUI()
 
     def initUI(self):
@@ -79,8 +85,14 @@ class evd(QtGui.QWidget):
         self._fileSelectButton.clicked.connect(self.selectFile)
 
         # Button to adjust the range to the max:
-        self._rangeButton = QtGui.QPushButton("Max Range")
-        self._rangeButton.clicked.connect(self.setRangeToMax)
+        self._maxRangeButton = QtGui.QPushButton("Max Range")
+        self._maxRangeButton.clicked.connect(self.setRangeToMax)
+        #Button to Auto Range:
+        self._autoRangeButton = QtGui.QCheckBox("Auto Range")
+        self._autoRangeButton.setTristate(False)
+        self._autoRangeButton.stateChanged.connect(self.autoRange)
+        self._lockAspectRatio = QtGui.QCheckBox("Lock A.R.")
+
 
         # ColorMap used to color data:
         self._cmap = pg.GradientWidget(orientation='top')
@@ -91,20 +103,6 @@ class evd(QtGui.QWidget):
         self._cmap.sigGradientChanged.connect(self.refreshGradient)
         # print self._cmap.size()
 
-        # Area to hold buttons
-        self._controlBox = QtGui.QVBoxLayout()
-        
-
-
-
-
-        self._controlBox.addWidget(self._nextButton)
-        self._controlBox.addWidget(self._prevButton)
-        self._controlBox.addWidget(self._fileSelectButton)
-        # self._controlBox.addWidget(self._colorButton)
-        # self._controlBox.addWidget(self._cmap)
-        self._controlBox.addWidget(self._rangeButton)
-        
 
         self._drawRawOption = QtGui.QCheckBox("Draw Raw")
         self._drawRawOption.setTristate(False)
@@ -114,25 +112,40 @@ class evd(QtGui.QWidget):
         self._unitDisplayOption.setTristate(False)
         self._unitDisplayOption.stateChanged.connect(self.unitChoicedChanged)
 
+        # Area to hold buttons to control the events
+        self._eventControlBox = QtGui.QVBoxLayout()
+        self._eventControlBox.addWidget(self._nextButton)
+        self._eventControlBox.addWidget(self._prevButton)
+        self._eventControlBox.addWidget(self._fileSelectButton)
+        # self._eventControlBox.addWidget(self._colorButton)
+        # self._eventControlBox.addWidget(self._cmap)
+        
         # Add labels for the hits and clusters:
         # Set up the labels that hold the data:
         self.initDataChoices()
         for key in self._dataListsAndLabels:
-            self._controlBox.addWidget(self._dataListsAndLabels[key])
+            self._eventControlBox.addWidget(self._dataListsAndLabels[key])
 
 
-        self._controlBox.addWidget(self._drawRawOption)
+        self._eventControlBox.addWidget(self._drawRawOption)
 
-        self._controlBox.addStretch(1)
-        self._controlBox.addWidget(self._unitDisplayOption)
-        self._controlBox.addWidget(self._quitButton)
+        self._eventControlBox.addStretch(1)
 
+
+        # Area to hold buttons to control the view
+        self._eventControlBox.addWidget(self._maxRangeButton)
+        self._eventControlBox.addWidget(self._autoRangeButton)
+        self._eventControlBox.addWidget(self._lockAspectRatio)
+        self._eventControlBox.addStretch(1)
+
+        self._eventControlBox.addWidget(self._unitDisplayOption)
+        self._eventControlBox.addWidget(self._quitButton)
         # Add a status bar for information purposes:
         self.statusBar = QtGui.QStatusBar()
 
 
         # Area to hold data:
-        self._dataBox = QtGui.QGridLayout()
+        self._dataBox = QtGui.QVBoxLayout()
         self._drawerList = []
         nviews = self._baseData._nviews
         for i in range(0, nviews):
@@ -140,7 +153,8 @@ class evd(QtGui.QWidget):
             self._drawerList.append(evd_drawer())
             # print 
             # add it to the layout:
-            self._dataBox.addWidget(self._drawerList[-1], 2*i,1,1,1)
+            self._dataBox.addWidget(self._drawerList[-1])
+            # self._dataBox.addWidget(self._drawerList[-1], 2*i,1,1,1)
             self._drawerList[-1]._wRange = self._baseData._wRange
             self._drawerList[-1]._tRange = self._baseData._tRange
             self._drawerList[-1].connectStatusBar(self.statusBar)
@@ -148,7 +162,8 @@ class evd(QtGui.QWidget):
 
         # Make an extra space for wires:
         self._drawerList.append(pg.GraphicsLayoutWidget())
-        self._dataBox.addWidget(self._drawerList[-1],2*nviews+1,1,2,1)
+        self._dataBox.addWidget(self._drawerList[-1])
+        # self._dataBox.addWidget(self._drawerList[-1],2*nviews+1,1,2,1)
         
         self._wirePlot = self._drawerList[-1].addPlot()
         self._wirePlotItem = pg.PlotDataItem()
@@ -161,9 +176,10 @@ class evd(QtGui.QWidget):
 
         # Put the layout together
         grid = QtGui.QGridLayout()
-        grid.addLayout(self._controlBox,1,0,2*nviews+1,1)
-        grid.addLayout(self._dataBox,1,1)
-        grid.addWidget(self.statusBar)
+        grid.addLayout(self._eventControlBox,0,0)
+        # grid.addLayout(self._eventControlBox,2,0,nviews+1,1)
+        grid.addLayout(self._dataBox,0,1,2,2)
+        grid.addWidget(self.statusBar,2,0,1,2)
         self.setLayout(grid)    
 
         
@@ -331,10 +347,14 @@ class evd(QtGui.QWidget):
 
     def drawClusters(self):
         procs = self._baseData._daughterProcesses
+        if 'cluster' not in procs:
+            # This means clusters aren't being drawn, bail
+            return
         # print procs.keys()
         for view in range(0,self._baseData._nviews):
             clusters = procs['cluster'].get_clusters(view)
             self._drawerList[view].drawClusters(clusters)
+
 
 
     def updateImage(self):
@@ -370,12 +390,16 @@ class evd(QtGui.QWidget):
       self._baseData._event += 1
       self.clearDrawnProducts()
       self.updateImage()
+      if self._autoRangeButton.isChecked():
+        self.autoRange()
 
     def prevEvent(self):
-      if self._baseData._event != 1:
+      if self._baseData._event != 0:
           self._baseData._event -= 1
       self.clearDrawnProducts()
       self.updateImage()
+      if self._autoRangeButton.isChecked():
+        self.autoRange()
 
     def refreshGradient(self):
       # print ("Gradient Changed")
@@ -390,6 +414,16 @@ class evd(QtGui.QWidget):
       yR = (0,self._baseData._tRange)
       for i in range (0, self._baseData._nviews):
         self._drawerList[i]._view.setRange(xRange=xR,yRange=yR, padding=0)
+
+    def autoRange(self):
+        if self._autoRangeButton.isChecked():
+            procs = self._baseData._daughterProcesses
+            if 'cluster' not in procs:
+                # This means clusters aren't being drawn, bail
+                return
+            for v in range(0, self._baseData._nviews):
+                xR,yR = procs['cluster'].get_range(v)
+                self._drawerList[v]._view.setRange(xRange=xR,yRange=yR, padding=0)
 
 
     def selectFile(self):

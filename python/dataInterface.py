@@ -91,6 +91,9 @@ class clusterInterface(object):
   def get_n_clusters(self,view):
     return self._process.getNClustersByPlane(view)
 
+  def get_range(self,view):
+    return np.array(self._c2p.Convert(self._process.GetWireRange(view))), np.array(self._c2p.Convert(self._process.GetTimeRange(view)))
+
   def setProducer(self, prod):
     self._producer = str(prod)
     self._process.setProducer(self._producer)
