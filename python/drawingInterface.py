@@ -82,6 +82,7 @@ class clusterDrawer(object):
                 self._inputHits[2][i],
                 outline
                 )
+
             r.connectOwnerHoverEnter(self.hoverEnter)
             r.connectOwnerHoverExit(self.hoverExit)
             r.connectToggleHighlight(self.toggleHighlight)
@@ -122,7 +123,7 @@ class evd_drawer(pg.GraphicsLayoutWidget):
         self._cmSpace = False
         self._wire2cm = 0.4
         self._time2cm = 0.2
-        self._wRange  = 240
+        self._wRange  = []
         self._tRange  = 2000 
 
     def mouseMoved(self, pos):

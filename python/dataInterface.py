@@ -121,7 +121,9 @@ class baseDataInterface(object):
     self._hasFile = False
     
     # Generate blank data for the display if there is no raw:
-    self._blankData = np.ones((larutil.Geometry.GetME().Nwires(0),larutil.Geometry.GetME().Nwires(0)/self._aspectRatio))
+    self._blankData = []
+    for v in range(0, self._nviews):
+      self._blankData.append(np.ones((larutil.Geometry.GetME().Nwires(v),larutil.Geometry.GetME().Nwires(v)/self._aspectRatio)))
     self._daughterProcesses = dict()
 
   def init_geom(self):
@@ -131,7 +133,9 @@ class baseDataInterface(object):
     self._wire2Cm = larutil.GeometryUtilities.GetME().WireToCm()
     self._aspectRatio = self._time2Cm / self._wire2Cm
     # Get the ranges:
-    self._wRange = larutil.Geometry.GetME().Nwires(0)
+    self._wRange = []
+    for v in range(0, self._nviews):
+     self._wRange.append(larutil.Geometry.GetME().Nwires(0))
     self._tRange = larutil.DetectorProperties.GetME().ReadOutWindowSize()
 
     # self.xmin

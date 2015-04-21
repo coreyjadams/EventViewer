@@ -14,12 +14,16 @@ from drawingInterface import *
 #   --- even better: bind keys to buttons!
 # Show run, event number and ability to jump to events
 
-# Semi implemented:
+# command line options or button to toggle argo or microboone geom
+
+
+# Just implemented:
 # automatically zoom to the region of interest
 #  -> Want to add option to set range to max, auto range
 #  -> Also want to be able to lock x,y axes to the correct aspect ratio.
 #       -> can use view.setAspectLocked(True, ratio=aspectRatio)
 # Want to be able to toggle on or off the wire display
+# Fixed bug in wire range so that Nwires is a function of plane, now.
 
 
 # Current list of features:
@@ -63,7 +67,7 @@ class evd(QtGui.QWidget):
         super(evd, self).__init__()
         # self._filePath = "/media/cadams/data_linux/argoneut_mc/nue_larlite_all.root"
         self._filePath = ""
-        self._baseData = baseDataInterface(argo=False)
+        self._baseData = baseDataInterface(argo=True)
         self.initUI()
 
     def initUI(self):
@@ -173,8 +177,7 @@ class evd(QtGui.QWidget):
         self._wirePlot = self._drawerList[-1].addPlot()
         self._wirePlotItem = pg.PlotDataItem()
         self._wirePlot.addItem(self._wirePlotItem)
-        self._wirePlot.setVisible(False)
-        self._wirePlot.setVisible(True)
+
 
         # Connect the wire drawing box to the planes so that they may
         # update it
@@ -332,7 +335,7 @@ class evd(QtGui.QWidget):
       d = self._baseData._blankData  
       self._cmap.restoreState(self._blankMapCollection)
       for i in range (0, self._baseData._nviews):
-          self._drawerList[i]._item.setImage(image=d, scale=self._baseData._aspectRatio)
+          self._drawerList[i]._item.setImage(image=d[i], scale=self._baseData._aspectRatio)
           self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
 
 
@@ -417,9 +420,9 @@ class evd(QtGui.QWidget):
         # print
 
     def setRangeToMax(self):
-      xR = (0,self._baseData._wRange)
-      yR = (0,self._baseData._tRange)
       for i in range (0, self._baseData._nviews):
+        xR = (0,self._baseData._wRange[i])
+        yR = (0,self._baseData._tRange)
         self._drawerList[i]._view.setRange(xRange=xR,yRange=yR, padding=0)
 
     def autoRange(self):
