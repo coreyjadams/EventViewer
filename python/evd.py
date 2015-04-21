@@ -173,6 +173,8 @@ class evd(QtGui.QWidget):
         self._wirePlot = self._drawerList[-1].addPlot()
         self._wirePlotItem = pg.PlotDataItem()
         self._wirePlot.addItem(self._wirePlotItem)
+        self._wirePlot.setVisible(False)
+        self._wirePlot.setVisible(True)
 
         # Connect the wire drawing box to the planes so that they may
         # update it
@@ -443,8 +445,11 @@ class evd(QtGui.QWidget):
     def drawWireOption(self):
         if self._drawWireOption.isChecked():
             self._dataBox.addWidget(self._drawerList[-1])
+            self._drawerList[-1].setVisible(True)
         else:
             self._dataBox.removeWidget(self._drawerList[-1])
+            self._drawerList[-1].setVisible(False)
+            self.update()
 
     def selectFile(self):
         self._filePath = str(QtGui.QFileDialog.getOpenFileName())
