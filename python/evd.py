@@ -90,6 +90,13 @@ class evd(QtGui.QWidget):
         self._fileSelectButton = QtGui.QPushButton("Select File")
         self._fileSelectButton.clicked.connect(self.selectFile)
 
+        # Labels and text entry to display the event number
+
+        self._eventEntry = QtGui.QLineEdit()
+        self._eventEntry.returnPressed.connect(self.eventEntryChanged)
+        self._runLabel = QtGui.QLabel("Run: -")
+        self._eventLabel = QtGui.QLabel("Ev.: -")
+
         # Button to adjust the range to the max:
         self._maxRangeButton = QtGui.QPushButton("Max Range")
         self._maxRangeButton.clicked.connect(self.setRangeToMax)
@@ -122,6 +129,11 @@ class evd(QtGui.QWidget):
 
         # Area to hold buttons to control the events
         self._eventControlBox = QtGui.QVBoxLayout()
+        self._eventControlBox.addWidget(self._eventEntry)
+        self._runEventGrid = QtGui.QHBoxLayout()
+        self._runEventGrid.addWidget(self._runLabel)
+        self._runEventGrid.addWidget(self._eventLabel)
+        self._eventControlBox.addLayout(self._runEventGrid)
         self._eventControlBox.addWidget(self._nextButton)
         self._eventControlBox.addWidget(self._prevButton)
         self._eventControlBox.addWidget(self._fileSelectButton)
@@ -397,17 +409,45 @@ class evd(QtGui.QWidget):
             self._drawerList[view].clearClusters()
 
     def nextEvent(self):
-      self._baseData._event += 1
-      self.clearDrawnProducts()
-      self.updateImage()
-      if self._autoRangeButton.isChecked():
-        self.autoRange()
+      if self._baseData._event != self._baseData._maxEvent:
+        self.goToEvent(self._baseData._event + 1)
 
     def prevEvent(self):
       if self._baseData._event != 0:
-          self._baseData._event -= 1
+        self.goToEvent(self._baseData._event - 1)
+
+    def eventEntryChanged(self):
+        if not self._baseData._hasFile:
+            print "Please select a file before trying to view events."
+            self._eventEntry.setText(str(self._baseData._event))
+            return
+        # Find out what event was requested, attempt to parse to int:
+        s = self._eventEntry.displayText()
+        # see if it's an int:
+        try:
+            ev = int(s)
+        except Exception, e:
+            print "Must enter a number!"
+            self._eventEntry.setText(str(self._baseData._event))
+            return
+
+        # First, check if this event is valid
+        if ev < 0 or ev > self._baseData._maxEvent:
+            print "Event must be between 0 and ", self._baseData._maxEvent
+            self._eventEntry.setText(str(self._baseData._event))
+            return
+
+        self.goToEvent(ev)
+
+
+    def goToEvent(self, event):
+      self._baseData._event = event
       self.clearDrawnProducts()
       self.updateImage()
+      self._eventEntry.setText(str(event))
+      r,e = self._baseData.getRunAndEvent()
+      self._runLabel.setText("Run: " + str(r))
+      self._eventLabel.setText("Run: " + str(e))
       if self._autoRangeButton.isChecked():
         self.autoRange()
 

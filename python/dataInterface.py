@@ -6,6 +6,7 @@ import sys
 from ROOT import *
 
 
+
 class rawDataInterface(object):
   """docstring for rawDataInterface"""
   def __init__(self):
@@ -117,8 +118,10 @@ class baseDataInterface(object):
     else:
       self.init_geom()
     self._event = 0
-    self._lastProcessed = 0
+    self._lastProcessed = -1
     self._hasFile = False
+
+
     
     # Generate blank data for the display if there is no raw:
     self._blankData = []
@@ -146,10 +149,12 @@ class baseDataInterface(object):
 
   def init_proc(self):
     self._my_proc = fmwk.ana_processor()
+    self._my_proc.set_verbosity(larlite.msg.kERROR)
     self._my_proc.set_io_mode(fmwk.storage_manager.kREAD)
+    # Set up a storage manager to handle event validation:
+    self._mgr = fmwk.storage_manager()
 
   def set_input_file(self, file):
-    self._my_proc.reset()
     self.init_proc()
     if self._fileInterface.fileExists(file):
       self._fileInterface.pingFile(file)
@@ -157,6 +162,11 @@ class baseDataInterface(object):
       print "Requested file does not exist: ", file
       return
     self._my_proc.add_input_file(file) 
+    self._mgr.add_in_filename(file)
+    self._mgr.set_io_mode(self._mgr.kREAD)
+    self._mgr.open()
+    self._mgr.next_event()
+    self._maxEvent = self._mgr.get_entries()
     self._hasFile=True
 
   def add_drawing_process(self, dataProduct, producer):
@@ -185,19 +195,45 @@ class baseDataInterface(object):
           self._my_proc.add_process(self._daughterProcesses[dataProduct]._process)
           self._daughterProcesses[dataProduct].setProducer(producer)
           self._daughterProcesses[dataProduct].initialize()
+        self.processEvent(True)
       else:
         print "Failed to find producer ", producer
     else:
       print "Failed to find data product", dataProduct          
-    pass
-    self._my_proc.process_event(self._event)
 
   def remove_drawing_process(self,dataProduct):
     if dataProduct in self._daughterProcesses:
       self._daughterProcesses.pop(dataProduct)
 
-  def processEvent(self):
-    if self._lastProcessed != self._event:
+  def processEvent(self,force = False):
+    if len(self._daughterProcesses) == 0:
+      self._mgr.go_to(self._event)
+      return
+    if self._lastProcessed != self._event or force:
       self._my_proc.process_event(self._event)
+      self._mgr.go_to(self._event)
       self._lastProcessed = self._event
+
+  def getRunAndEvent(self):
+    if not self._mgr.is_open():
+      return 0,0
+
+    # Define the larlite types to get:
+    types = dict()
+    # types.update({'vertex': fmwk.event_vertex})
+    types.update({'hit': fmwk.event_hit})
+    types.update({'cluster': fmwk.event_cluster})
+
+
+    # Get an event vector out of this file, and use it to
+    # get the run and event info
+    # Any old data product will do, but don't use wires
+    keys = self._fileInterface.getListOfKeys()
+    for key in keys:
+      # print key
+      # print keys[key][0]
+      if key in types:
+        d = self._mgr.get_data(types[key])(keys[key][0])
+        return d.run(), d.event_id()
+    # d = mgr.get_data(fmwk.event_hit)("cccluster")
 

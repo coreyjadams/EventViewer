@@ -70,6 +70,28 @@ namespace larlite {
     // clear the spots that hold the data:
   // Obtain event-wise data object pointers
     //
+   
+    auto detProp = larutil::DetectorProperties::GetME();
+
+    // Clear out the hit data but reserve some space for the hits
+    for (unsigned int p = 0; p < geoService -> Nviews(); p ++){
+
+      wireByPlaneByCluster     ->at(p).clear();
+      hitStartByPlaneByCluster ->at(p).clear();
+      hitEndByPlaneByCluster   ->at(p).clear();
+
+      
+      wireRange.at(p).resize(2);
+      timeRange.at(p).resize(2);
+
+      // Reset the bounding items for this event:
+      wireRange.at(p).at(0) = geoService -> Nwires(p);
+      wireRange.at(p).at(1) = 0;
+      timeRange.at(p).at(0) = detProp -> NumberTimeSamples();
+      timeRange.at(p).at(1) = 0;
+    
+    }
+
     auto ev_clus = storage->get_data<event_cluster>(producer);
     if(!ev_clus)
       return false;
@@ -97,29 +119,12 @@ namespace larlite {
       return false;
     }
 
-    auto detProp = larutil::DetectorProperties::GetME();
     
-
-    // Clear out the hit data but reserve some space for the hits
     for (unsigned int p = 0; p < geoService -> Nviews(); p ++){
-
-      wireByPlaneByCluster     ->at(p).clear();
-      hitStartByPlaneByCluster ->at(p).clear();
-      hitEndByPlaneByCluster   ->at(p).clear();
 
       wireByPlaneByCluster     ->at(p).reserve(ev_clus->size());
       hitStartByPlaneByCluster ->at(p).reserve(ev_clus->size());
       hitEndByPlaneByCluster   ->at(p).reserve(ev_clus->size());
-      
-      wireRange.at(p).resize(2);
-      timeRange.at(p).resize(2);
-
-      // Reset the bounding items for this event:
-      wireRange.at(p).at(0) = geoService -> Nwires(p);
-      wireRange.at(p).at(1) = 0;
-      timeRange.at(p).at(0) = detProp -> NumberTimeSamples();
-      timeRange.at(p).at(1) = 0;
-    
     }
 
 

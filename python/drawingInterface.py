@@ -91,6 +91,7 @@ class clusterDrawer(object):
         for hit in self._listOfHits:
             self._view.removeItem(hit)
         self._listOfHits = []
+        self._inputHits = []
 
     def hoverEnter(self, e):
         for hit in self._listOfHits:
