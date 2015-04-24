@@ -12,7 +12,6 @@ from drawingInterface import *
 # Add other 2d reco objects: vertex, mctrack/mcshower.  Print mctruth
 # hit enter to go to the next event
 #   --- even better: bind keys to buttons!
-# Show run, event number and ability to jump to events
 
 # command line options or button to toggle argo or microboone geom
 
@@ -39,6 +38,7 @@ from drawingInterface import *
 #  p - prev event
 #  c - set focus to clusters
 #  h - set focus to hits
+# Show run, event number and ability to jump to events
 
 
 
