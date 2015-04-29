@@ -87,6 +87,37 @@ namespace larlite {
     return pvec;
   }
 
+  PyObject* Converter::ConvertShort(const std::vector<unsigned short>& us_array) const{
+    PyObject* pvec = PyList_New(us_array.size());
+
+    for(size_t i=0; i<us_array.size(); ++i) {
+
+      if(PyList_SetItem(pvec, i, PyLong_FromLong(us_array[i]))) {
+
+        Py_DECREF(pvec);
+        std::cerr<<"<<Convert>> failed!"<<std::endl;
+        throw std::exception();
+      }
+    }
+    return pvec;
+  }
+
+  PyObject* Converter::ConvertShort(const std::vector<std::vector<unsigned short>>& usus_array) const{
+    PyObject* pvec = PyList_New(usus_array.size());
+
+    for(size_t i=0; i<usus_array.size(); ++i) {
+
+      if(PyList_SetItem(pvec, i, ConvertShort(usus_array[i]))) {
+
+        Py_DECREF(pvec);
+        std::cerr<<"<<Convert>> failed!"<<std::endl;
+        throw std::exception();
+      }
+    }
+    return pvec;
+  }
+
+
 }
 
 

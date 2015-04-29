@@ -51,6 +51,8 @@ public:
   PyObject* Convert(const std::vector<std::vector<float>>& fltflt_array) const;
   PyObject* Convert(const std::vector<int>& flt_array) const;
   PyObject* Convert(const std::vector<std::vector<int>>& fltflt_array) const;
+  PyObject* ConvertShort(const std::vector<unsigned short>& flt_array) const;
+  PyObject* ConvertShort(const std::vector<std::vector<unsigned short>>& fltflt_array) const;
 
 };
 

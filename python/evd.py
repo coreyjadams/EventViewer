@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import sys
+import argparse
 from PyQt4 import QtGui, QtCore
 import pyqtgraph as pg
 from dataInterface import *
@@ -63,15 +64,16 @@ class ComboBoxWithKeyConnect(QtGui.QComboBox):
 class evd(QtGui.QWidget):
 
 
-    def __init__(self):
+    def __init__(self, geometry,mode,fileName=None):
         super(evd, self).__init__()
         # self._filePath = "/media/cadams/data_linux/argoneut_mc/nue_larlite_all.root"
-        self._filePath = ""
-        self._baseData = baseDataInterface(argo=True)
+        self._filePath = fileName
+        self._mode = mode
+        self._geometry = geometry
+        self._baseData = baseDataInterface(geometry,mode)
         self.initUI()
 
     def initUI(self):
-
 
 
         # Buttons for using the event display:
@@ -122,6 +124,8 @@ class evd(QtGui.QWidget):
         self._drawRawOption = QtGui.QCheckBox("Draw Raw")
         self._drawRawOption.setTristate(False)
         self._drawRawOption.stateChanged.connect(self.rawChoiceChanged)
+        if self._mode == "daq":
+            self._drawRawOption.setCheckState(True)
 
         self._unitDisplayOption = QtGui.QCheckBox("Use cm")
         self._unitDisplayOption.setTristate(False)
@@ -142,19 +146,20 @@ class evd(QtGui.QWidget):
         
         # Add labels for the hits and clusters:
         # Set up the labels that hold the data:
-        self.initDataChoices()
-        for key in self._dataListsAndLabels:
-            self._eventControlBox.addWidget(self._dataListsAndLabels[key])
+        if self._mode != "daq":
+            self.initDataChoices()
+            for key in self._dataListsAndLabels:
+                self._eventControlBox.addWidget(self._dataListsAndLabels[key])
 
-
-        self._eventControlBox.addWidget(self._drawRawOption)
+            self._eventControlBox.addWidget(self._drawRawOption)
 
         self._eventControlBox.addStretch(1)
 
 
         # Area to hold buttons to control the view
         self._eventControlBox.addWidget(self._maxRangeButton)
-        self._eventControlBox.addWidget(self._autoRangeButton)
+        if self._mode != "daq":
+            self._eventControlBox.addWidget(self._autoRangeButton)
         self._eventControlBox.addWidget(self._lockAspectRatio)
         self._eventControlBox.addWidget(self._drawWireOption)
         self._eventControlBox.addStretch(1)
@@ -206,14 +211,12 @@ class evd(QtGui.QWidget):
 
         
         self.setGeometry(800, 300, 800, 800)
-        self.setWindowTitle('Buttons')    
+        self.setWindowTitle('Event Display')    
         self.show()
 
 
         # If there was a file passed on commandline, try to use it:
-        # print len(sys.argv)
-        if (len(sys.argv) > 1):
-            self._filePath = sys.argv[-1]
+        if (self._filePath != ""):
             self.initData()
             self.updateDataChoices()
             
@@ -243,20 +246,23 @@ class evd(QtGui.QWidget):
         self._dataListsAndLabels['Clusters'].activated[str].connect(self.clusterChoiceChanged)
 
     def updateDataChoices(self):
-        # Call this method to refresh the list of available data products to draw
-        for key in self._baseData._fileInterface.getListOfKeys():
-            # self._dataListsAndLabels['Hits'].addItem(key)
-            if key == 'hit':
-                self._dataListsAndLabels['Hits'].clear()
-                self._dataListsAndLabels['Hits'].addItem("--Select--")
-                for item in self._baseData._fileInterface.getListOfKeys()['hit']:
-                    self._dataListsAndLabels['Hits'].addItem(item)
+        if self._mode == "daq":
+            return
+        else:
+            # Call this method to refresh the list of available data products to draw
+            for key in self._baseData._dataHandle._fileInterface.getListOfKeys():
+                # self._dataListsAndLabels['Hits'].addItem(key)
+                if key == 'hit':
+                    self._dataListsAndLabels['Hits'].clear()
+                    self._dataListsAndLabels['Hits'].addItem("--Select--")
+                    for item in self._baseData._dataHandle._fileInterface.getListOfKeys()['hit']:
+                        self._dataListsAndLabels['Hits'].addItem(item)
 
-            if key == 'cluster':
-                self._dataListsAndLabels['Clusters'].clear()
-                self._dataListsAndLabels['Clusters'].addItem("--Select--")
-                for item in self._baseData._fileInterface.getListOfKeys()['cluster']:
-                    self._dataListsAndLabels['Clusters'].addItem(item)
+                if key == 'cluster':
+                    self._dataListsAndLabels['Clusters'].clear()
+                    self._dataListsAndLabels['Clusters'].addItem("--Select--")
+                    for item in self._baseData._dataHandle._fileInterface.getListOfKeys()['cluster']:
+                        self._dataListsAndLabels['Clusters'].addItem(item)
 
     def hitsChoiceChanged(self, text):
         # This is the only method monitoring the status of hit drawing
@@ -309,16 +315,20 @@ class evd(QtGui.QWidget):
                 self._drawerList[i]._cmSpace = False;           
 
     def initData(self):
-        self._baseData.set_input_file(self._filePath)
+        self._baseData._dataHandle.set_input_file(self._filePath)
         # print self._baseData._fileInterface.getListOfKeys()
         # check for raw data, make a handle for it if available:
-        if 'wire' in self._baseData._fileInterface.getListOfKeys():
-            # print "Adding wire data"
-            # print self._baseData._fileInterface.getListOfKeys()
-            # print self._baseData._fileInterface.getListOfKeys()['wire'][0]
-            self._baseData.add_drawing_process('wire',self._baseData._fileInterface.getListOfKeys()['wire'][0])
-            self._drawRawOption.setCheckState(True)
-            return
+        if self._mode == "daq":
+            # se.f._baseData._dataHandle
+            pass
+        else:
+            if 'wire' in self._baseData._dataHandle._fileInterface.getListOfKeys():
+                # print "Adding wire data"
+                # print self._baseData._fileInterface.getListOfKeys()
+                # print self._baseData._fileInterface.getListOfKeys()['wire'][0]
+                self._baseData.dataHandle.add_drawing_process('wire',self._baseData._fileInterface.getListOfKeys()['wire'][0])
+                self._drawRawOption.setCheckState(True)
+                return
         
         # TODO
         # Here's how I imagine the workflow:
@@ -333,15 +343,27 @@ class evd(QtGui.QWidget):
     # What follows are functions to manage the next, prev events etc.
 
     def drawRaw(self):
-      if not 'wire' in self._baseData._daughterProcesses:
-          print "No wire data available to draw!"
-          return
-      d = self._baseData._daughterProcesses['wire'].get_img()
-      self._cmap.restoreState(self._colorMapCollection)
-      for i in range (0, self._baseData._nviews):
-          self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
-          self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
-      self.drawWire(1,1)
+      if self._mode != "daq":
+          if not 'wire' in self._baseData._daughterProcesses:
+              print "No wire data available to draw!"
+              return
+          d = self._baseData._daughterProcesses['wire'].get_img()
+          self._cmap.restoreState(self._colorMapCollection)
+          for i in range (0, self._baseData._nviews):
+              self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
+              self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
+          self.drawWire(1,1)
+          print "Should have drawn wire data!"
+      elif self._mode == "daq":
+        if self._baseData._dataHandle._hasFile:
+          d = self._baseData._dataHandle.get_img()
+          self._cmap.restoreState(self._colorMapCollection)
+          for i in range (0, self._baseData._nviews):
+              self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
+              self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
+          self.drawWire(1,1)
+
+
 
     def drawBlank(self):
       d = self._baseData._blankData  
@@ -353,19 +375,25 @@ class evd(QtGui.QWidget):
 
     def drawWire(self, plane,wire):
       # just testing, draw one wire (plane 0, wire 200)
-      if self._drawRawOption.isChecked():
-          wire =self._baseData._daughterProcesses['wire'].get_wire(plane,wire)
+      if self._mode == "daq":
+        wire = self._baseData._dataHandle.get_wire(plane,wire)
+        if wire != None:
           self._wirePlotItem.setData(wire)
+      else:
+        if self._drawRawOption.isChecked():
+          wire =self._baseData._dataHandle._daughterProcesses['wire'].get_wire(plane,wire)
+          if wire != None:
+            self._wirePlotItem.setData(wire)
 
     def drawHits(self):
-        # print self._baseData._daughterProcesses.keys()
-        for view in range(0,self._baseData._nviews):
-            hits = self._baseData._daughterProcesses['hit'].get_hits(view)
-            self._drawerList[view].drawHits(hits)
+      # print self._baseData._daughterProcesses.keys()
+      for view in range(0,self._baseData._nviews):
+        hits = self._baseData._daughterProcesses['hit'].get_hits(view)
+        self._drawerList[view].drawHits(hits)
 
-            # print hits[0]
-            # for hitIndex in range(0, len(hits[0])):
-                # self._drawerList[view].drawRect(hits[0][hitIndex], hits[1][hitIndex],hits[2][hitIndex])
+        # print hits[0]
+        # for hitIndex in range(0, len(hits[0])):
+          # self._drawerList[view].drawRect(hits[0][hitIndex], hits[1][hitIndex],hits[2][hitIndex])
 
     def drawClusters(self):
         procs = self._baseData._daughterProcesses
@@ -381,24 +409,25 @@ class evd(QtGui.QWidget):
 
     def updateImage(self):
         drawn = False
-        if not self._baseData._hasFile:
+        if not self._baseData._dataHandle._hasFile:
             self.drawBlank()
             return
         else:
-            self._baseData.processEvent()
+            self._baseData._dataHandle.processEvent()
+            drawn = True
         if self._drawRawOption.isChecked():
-            self.drawRaw()
-            drawn = True
-            pass
-        if self._dataListsAndLabels['Hits'].currentText() != '--Select--':
-          if self._dataListsAndLabels['Hits'].currentText() != '--None--':
-            self.drawHits()
-            drawn = True
-            pass
-        if self._dataListsAndLabels['Clusters'].currentText() != '--Select--':
-          if self._dataListsAndLabels['Clusters'].currentText() != '--None--':
-            self.drawClusters()
-            drawn = True
+          self.drawRaw()
+          drawn = True
+
+        if self._mode != "daq":
+            if self._dataListsAndLabels['Hits'].currentText() != '--Select--':
+              if self._dataListsAndLabels['Hits'].currentText() != '--None--':
+                self.drawHits()
+                drawn = True
+            if self._dataListsAndLabels['Clusters'].currentText() != '--Select--':
+              if self._dataListsAndLabels['Clusters'].currentText() != '--None--':
+                self.drawClusters()
+                drawn = True
 
         if not drawn:
           self.drawBlank()
@@ -409,12 +438,18 @@ class evd(QtGui.QWidget):
             self._drawerList[view].clearClusters()
 
     def nextEvent(self):
-      if self._baseData._event != self._baseData._maxEvent:
-        self.goToEvent(self._baseData._event + 1)
+      if self._mode == "daq":
+        self._baseData._dataHandle.next()
+      else:
+        if self._baseData._event != self._baseData._maxEvent:
+          self.goToEvent(self._baseData._event + 1)
 
     def prevEvent(self):
-      if self._baseData._event != 0:
-        self.goToEvent(self._baseData._event - 1)
+      if self._mode == "daq":
+        self._baseData._dataHandle.prev()
+      else:
+        if self._baseData._event != 0:
+          self.goToEvent(self._baseData._event - 1)
 
     def eventEntryChanged(self):
         if not self._baseData._hasFile:
@@ -522,8 +557,28 @@ class evd(QtGui.QWidget):
 
 def main():
     
+    parser = argparse.ArgumentParser(description='Python based event display.')
+    geom = parser.add_mutually_exclusive_group()
+    geom.add_argument('-A', '--argoneut',action='store_true',help="Run with the argoneut geometry")
+    geom.add_argument('-U', '--uboone',action='store_true',help="Run with the microboone geometry")
+    geom.add_argument('-L', '--lariat',action='store_true',help="Run with the lariat geometry")
+    parser.add_argument('file',nargs='?',help="Optional input file to use")
+    parser.add_argument('-d',"--daq",action='store_true',help="Run the evd in daq mode.")
+    args = parser.parse_args()
+
     app = QtGui.QApplication(sys.argv)
-    ex = evd()
+    geometry = "uboone"
+    if args.argoneut:
+        geometry = "argoneut"
+    elif args.lariat:
+        geometry = "lariat"
+    if args.daq:
+        mode = "daq"
+    else:
+      mode = ""
+    
+    ex = evd(geometry,mode,args.file)
+
     sys.exit(app.exec_())
 
 

@@ -7,6 +7,50 @@ from ROOT import *
 
 
 
+class rawDaqInterface(object):
+  """docstring for rawDataInterface"""
+  def __init__(self):
+    super(rawDaqInterface, self).__init__()
+    # gSystem.Load("libEventViewer_RawViewer.so")
+    self._process = fmwk.DrawLariatDaq()
+    self._producer = ""
+    self._nviews=larutil.Geometry.GetME().Nviews()
+    self._c2p = fmwk.Converter()
+    self._hasFile = False
+
+    # self._process.setProducer(self._producer)
+
+  def get_img(self):
+    d = []
+    for i in range(0,self._nviews):
+      d.append(np.array(self._c2p.ConvertShort(self._process.getDataByPlane(i))) )
+    return d
+
+  def get_wire(self, plane, wire):
+    if plane > self._nviews:
+      return
+    if wire > 0 and wire < larutil.Geometry.GetME().Nwires(plane):
+      return np.array(self._c2p.ConvertShort(self._process.getWireData(plane,wire)))
+
+  def set_input_file(self, file):
+    self._file = file
+    if file == None:
+      return
+    else:
+      self._process.setInputFile(file)
+      self._hasFile = True
+
+  def processEvent(self):
+    # self._process.nextEvent()
+    return;
+
+  def next(self):
+    self._process.nextEvent()
+
+  def prev(self):
+    print "Called prev"
+    self._process.prevEvent()
+
 class rawDataInterface(object):
   """docstring for rawDataInterface"""
   def __init__(self):
@@ -105,29 +149,32 @@ class clusterInterface(object):
 
 class baseDataInterface(object):
   """docstring for baseDataInterface"""
-  def __init__(self, argo=True):
+  def __init__(self, geometry,mode):
     super(baseDataInterface, self).__init__()
     # self.arg = arg
     gSystem.Load("libLArLite_LArUtil")
     # initialize the c to numpy converter
     # initialize the ana processor
-    self.init_proc()
-    self._fileInterface = fileInterface()
-    if argo:
+    if geometry == "argoneut":
       self.config_argo()
+    elif geometry == "lariat":
+      self.config_lariat()
     else:
       self.init_geom()
     self._event = 0
     self._lastProcessed = -1
     self._hasFile = False
-
-
     
     # Generate blank data for the display if there is no raw:
     self._blankData = []
     for v in range(0, self._nviews):
       self._blankData.append(np.ones((larutil.Geometry.GetME().Nwires(v),larutil.Geometry.GetME().Nwires(v)/self._aspectRatio)))
-    self._daughterProcesses = dict()
+
+    if mode == "daq":
+      self._dataHandle = rawDaqInterface()
+    else:
+      self._dataHandle = larliteInterface()
+
 
   def init_geom(self):
     self._nviews=larutil.Geometry.GetME().Nviews()
@@ -147,27 +194,21 @@ class baseDataInterface(object):
     larutil.LArUtilManager.Reconfigure(fmwk.geo.kArgoNeuT)
     self.init_geom()
 
+
+class larliteInterface(object):
+  """docstring for larliteInterface"""
+  def __init__(self):
+    super(larliteInterface, self).__init__()
+    self.init_proc()
+    self._fileInterface = fileInterface()
+    self._daughterProcesses = dict()
+    
   def init_proc(self):
     self._my_proc = fmwk.ana_processor()
     self._my_proc.set_verbosity(larlite.msg.kERROR)
     self._my_proc.set_io_mode(fmwk.storage_manager.kREAD)
     # Set up a storage manager to handle event validation:
     self._mgr = fmwk.storage_manager()
-
-  def set_input_file(self, file):
-    self.init_proc()
-    if self._fileInterface.fileExists(file):
-      self._fileInterface.pingFile(file)
-    else:
-      print "Requested file does not exist: ", file
-      return
-    self._my_proc.add_input_file(file) 
-    self._mgr.add_in_filename(file)
-    self._mgr.set_io_mode(self._mgr.kREAD)
-    self._mgr.open()
-    self._mgr.next_event()
-    self._maxEvent = self._mgr.get_entries()
-    self._hasFile=True
 
   def add_drawing_process(self, dataProduct, producer):
     if not self._hasFile:
@@ -200,6 +241,22 @@ class baseDataInterface(object):
         print "Failed to find producer ", producer
     else:
       print "Failed to find data product", dataProduct          
+
+  def set_input_file(self, file):
+    self.init_proc()
+    if self._fileInterface.fileExists(file):
+      self._fileInterface.pingFile(file)
+    else:
+      print "Requested file does not exist: ", file
+      return
+    self._my_proc.add_input_file(file) 
+    self._mgr.add_in_filename(file)
+    self._mgr.set_io_mode(self._mgr.kREAD)
+    self._mgr.open()
+    self._mgr.next_event()
+    self._maxEvent = self._mgr.get_entries()
+    self._hasFile=True
+
 
   def remove_drawing_process(self,dataProduct):
     if dataProduct in self._daughterProcesses:
@@ -236,4 +293,3 @@ class baseDataInterface(object):
         d = self._mgr.get_data(types[key])(keys[key][0])
         return d.run(), d.event_id()
     # d = mgr.get_data(fmwk.event_hit)("cccluster")
-

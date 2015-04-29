@@ -160,8 +160,8 @@ class evd_drawer(pg.GraphicsLayoutWidget):
         # For this function, a click should get the wire that is
         # being hovered over and draw it at the bottom
         wire = int( self._item.mapFromScene(event.pos()).x())
-        # print "Plane: " + str(self._plane) + ", Wire: " + str(wire)
         self._wdf(self._plane,wire)
+        # print "Plane: " + str(self._plane) + ", Wire: " + str(wire)
         # return self.plane,self.wire
 
     def connectStatusBar(self, statusBar):
