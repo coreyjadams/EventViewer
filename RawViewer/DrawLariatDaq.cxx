@@ -68,7 +68,7 @@ namespace larlite {
         int plane = geoService->ChannelToPlane(lar_channel);
         int wire  = geoService->ChannelToWire(lar_channel);
         // Now we know which part of the data to read this channel into;
-        char name[10];
+        char name[20];
         sprintf(name,"channel_%i",channel);
         c -> SetBranchAddress(name,
             &(wiredata->at(plane).at(wire)[0]),
@@ -96,7 +96,7 @@ namespace larlite {
   }
 
   void DrawLariatDaq::prevEvent(){
-    
+
     if (current_event <= 0){
       std::cout << "On event " << current_event << std::endl;
       std::cout << "Warning, at beginning of file, can not go backwards.\n";
