@@ -75,7 +75,14 @@ namespace larlite {
 
     void nextEvent();
     void prevEvent();
-    
+    void goToEvent(int e);
+
+
+    unsigned int run(){return _run;}
+    unsigned int event_no(){return _event_no;}
+    int current_event() const{return _current_event;}
+    int n_events() const{return _n_events;}
+
   protected:
     
     //vector of [tpc][wire][time]
@@ -91,11 +98,15 @@ namespace larlite {
 
     TChain * c;
 
-    int n_events;
-    int current_event;
+    int _n_events;
+    // this is the event in the file (0 -> n_events)
+    int _current_event;
+    // this is the official event:
+    unsigned int _event_no;
+    unsigned int _run;
 
-    const int n_cards = 7;
-    const int n_channels = 64;
+    const int _n_cards = 7;
+    const int _n_channels = 64;
 
     // Need some private worker functions to handle file i/o
     void readData();

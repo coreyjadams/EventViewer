@@ -216,10 +216,10 @@ class evd(QtGui.QWidget):
 
 
         # If there was a file passed on commandline, try to use it:
-        if (self._filePath != ""):
+        if (self._filePath != None):
             self.initData()
             self.updateDataChoices()
-            
+            self.goToEvent(0)
 
         self.setRangeToMax()
 
@@ -273,12 +273,12 @@ class evd(QtGui.QWidget):
             self._drawerList[view].clearHits()
 
         # print "Hits choice changed to ", text
-        if 'hit' in self._baseData._fileInterface.getListOfKeys():
-            if text in self._baseData._fileInterface.getListOfKeys()['hit']:
+        if 'hit' in self._baseData._dataHandle._fileInterface.getListOfKeys():
+            if text in self._baseData._dataHandle._fileInterface.getListOfKeys()['hit']:
                 # print "Trying to add the hits process ..."
-                self._baseData.add_drawing_process('hit',text)
+                self._baseData._dataHandle.add_drawing_process('hit',text)
             else:
-                self._baseData.remove_drawing_process('hit')
+                self._baseData._dataHandle.remove_drawing_process('hit')
         self.updateImage()
 
     def clusterChoiceChanged(self,text):
@@ -290,12 +290,12 @@ class evd(QtGui.QWidget):
             self._drawerList[view].clearClusters()
                 
         # print "Hits choice changed to ", text
-        if 'cluster' in self._baseData._fileInterface.getListOfKeys():
-            if text in self._baseData._fileInterface.getListOfKeys()['cluster']:
+        if 'cluster' in self._baseData._dataHandle._fileInterface.getListOfKeys():
+            if text in self._baseData._dataHandle._fileInterface.getListOfKeys()['cluster']:
                 # print "Trying to add the clusters process ..."
-                self._baseData.add_drawing_process('cluster',text)
+                self._baseData._dataHandle.add_drawing_process('cluster',text)
             else:
-                self._baseData.remove_drawing_process('cluster')
+                self._baseData._dataHandle.remove_drawing_process('cluster')
         self.updateImage()
 
     def rawChoiceChanged(self):
@@ -326,7 +326,8 @@ class evd(QtGui.QWidget):
                 # print "Adding wire data"
                 # print self._baseData._fileInterface.getListOfKeys()
                 # print self._baseData._fileInterface.getListOfKeys()['wire'][0]
-                self._baseData.dataHandle.add_drawing_process('wire',self._baseData._fileInterface.getListOfKeys()['wire'][0])
+                self._baseData._dataHandle.add_drawing_process('wire',
+                  self._baseData._dataHandle._fileInterface.getListOfKeys()['wire'][0])
                 self._drawRawOption.setCheckState(True)
                 return
         
@@ -344,16 +345,15 @@ class evd(QtGui.QWidget):
 
     def drawRaw(self):
       if self._mode != "daq":
-          if not 'wire' in self._baseData._daughterProcesses:
+          if not 'wire' in self._baseData._dataHandle._daughterProcesses:
               print "No wire data available to draw!"
               return
-          d = self._baseData._daughterProcesses['wire'].get_img()
+          d = self._baseData._dataHandle._daughterProcesses['wire'].get_img()
           self._cmap.restoreState(self._colorMapCollection)
           for i in range (0, self._baseData._nviews):
               self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
               self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
           self.drawWire(1,1)
-          print "Should have drawn wire data!"
       elif self._mode == "daq":
         if self._baseData._dataHandle._hasFile:
           d = self._baseData._dataHandle.get_img()
@@ -388,7 +388,7 @@ class evd(QtGui.QWidget):
     def drawHits(self):
       # print self._baseData._daughterProcesses.keys()
       for view in range(0,self._baseData._nviews):
-        hits = self._baseData._daughterProcesses['hit'].get_hits(view)
+        hits = self._baseData._dataHandle._daughterProcesses['hit'].get_hits(view)
         self._drawerList[view].drawHits(hits)
 
         # print hits[0]
@@ -396,7 +396,7 @@ class evd(QtGui.QWidget):
           # self._drawerList[view].drawRect(hits[0][hitIndex], hits[1][hitIndex],hits[2][hitIndex])
 
     def drawClusters(self):
-        procs = self._baseData._daughterProcesses
+        procs = self._baseData._dataHandle._daughterProcesses
         if 'cluster' not in procs:
             # This means clusters aren't being drawn, bail
             return
@@ -418,6 +418,8 @@ class evd(QtGui.QWidget):
         if self._drawRawOption.isChecked():
           self.drawRaw()
           drawn = True
+        else:
+          self.drawBlank()
 
         if self._mode != "daq":
             if self._dataListsAndLabels['Hits'].currentText() != '--Select--':
@@ -438,21 +440,21 @@ class evd(QtGui.QWidget):
             self._drawerList[view].clearClusters()
 
     def nextEvent(self):
-      if self._mode == "daq":
-        self._baseData._dataHandle.next()
-      else:
-        if self._baseData._event != self._baseData._maxEvent:
-          self.goToEvent(self._baseData._event + 1)
+      # if self._mode == "daq":
+      #   self._baseData._dataHandle.next()
+      # else:
+        if self._baseData._dataHandle._event != self._baseData._dataHandle._maxEvent:
+          self.goToEvent(self._baseData._dataHandle._event + 1)
 
     def prevEvent(self):
-      if self._mode == "daq":
-        self._baseData._dataHandle.prev()
-      else:
-        if self._baseData._event != 0:
-          self.goToEvent(self._baseData._event - 1)
+      # if self._mode == "daq":
+      #   self._baseData._dataHandle.prev()
+      # else:
+        if self._baseData._dataHandle._event != 0:
+          self.goToEvent(self._baseData._dataHandle._event - 1)
 
     def eventEntryChanged(self):
-        if not self._baseData._hasFile:
+        if not self._baseData._dataHandle._hasFile:
             print "Please select a file before trying to view events."
             self._eventEntry.setText(str(self._baseData._event))
             return
@@ -467,7 +469,7 @@ class evd(QtGui.QWidget):
             return
 
         # First, check if this event is valid
-        if ev < 0 or ev > self._baseData._maxEvent:
+        if ev < 0 or ev > self._baseData._dataHandle._maxEvent:
             print "Event must be between 0 and ", self._baseData._maxEvent
             self._eventEntry.setText(str(self._baseData._event))
             return
@@ -476,13 +478,18 @@ class evd(QtGui.QWidget):
 
 
     def goToEvent(self, event):
-      self._baseData._event = event
+      self._baseData._dataHandle._event = event
+
+      # clear the viewer
       self.clearDrawnProducts()
+      # redraw:
       self.updateImage()
       self._eventEntry.setText(str(event))
-      r,e = self._baseData.getRunAndEvent()
+
+      r,e = self._baseData._dataHandle.getRunAndEvent()
       self._runLabel.setText("Run: " + str(r))
-      self._eventLabel.setText("Run: " + str(e))
+      self._eventLabel.setText("Ev.: " + str(e))
+      # autorange the viewer if selected:
       if self._autoRangeButton.isChecked():
         self.autoRange()
 
@@ -501,14 +508,16 @@ class evd(QtGui.QWidget):
         self._drawerList[i]._view.setRange(xRange=xR,yRange=yR, padding=0)
 
     def autoRange(self):
-        if self._autoRangeButton.isChecked():
-            procs = self._baseData._daughterProcesses
-            if 'cluster' not in procs:
-                # This means clusters aren't being drawn, bail
-                return
-            for v in range(0, self._baseData._nviews):
-                xR,yR = procs['cluster'].get_range(v)
-                self._drawerList[v]._view.setRange(xRange=xR,yRange=yR, padding=0.05)
+      if self._mode == "daq":
+        return
+      if self._autoRangeButton.isChecked():
+        procs = self._baseData._dataHandle._daughterProcesses
+        if 'cluster' not in procs:
+            # This means clusters aren't being drawn, bail
+            return
+        for v in range(0, self._baseData._nviews):
+            xR,yR = procs['cluster'].get_range(v)
+            self._drawerList[v]._view.setRange(xRange=xR,yRange=yR, padding=0.05)
 
     def lockAspectRatio(self):
         if self._lockAspectRatio.isChecked():

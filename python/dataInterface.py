@@ -17,7 +17,8 @@ class rawDaqInterface(object):
     self._nviews=larutil.Geometry.GetME().Nviews()
     self._c2p = fmwk.Converter()
     self._hasFile = False
-
+    self._lastProcessed = -1
+    self._event = 0
     # self._process.setProducer(self._producer)
 
   def get_img(self):
@@ -39,17 +40,23 @@ class rawDaqInterface(object):
     else:
       self._process.setInputFile(file)
       self._hasFile = True
+      self._maxEvent = self._process.n_events()
 
-  def processEvent(self):
-    # self._process.nextEvent()
-    return;
+  def processEvent(self,force = False):
+    if self._lastProcessed != self._event or force:
+      self._process.goToEvent(self._event)
+      self._lastProcessed = self._event
 
   def next(self):
+    print "Called next"
     self._process.nextEvent()
 
   def prev(self):
     print "Called prev"
     self._process.prevEvent()
+
+  def getRunAndEvent(self):
+    return self._process.run(),self._process.event_no()
 
 class rawDataInterface(object):
   """docstring for rawDataInterface"""
@@ -161,9 +168,8 @@ class baseDataInterface(object):
       self.config_lariat()
     else:
       self.init_geom()
-    self._event = 0
     self._lastProcessed = -1
-    self._hasFile = False
+    # self._hasFile = False
     
     # Generate blank data for the display if there is no raw:
     self._blankData = []
@@ -202,6 +208,9 @@ class larliteInterface(object):
     self.init_proc()
     self._fileInterface = fileInterface()
     self._daughterProcesses = dict()
+    self._hasFile = False
+    self._event = 0
+    self._lastProcessed = -1
     
   def init_proc(self):
     self._my_proc = fmwk.ana_processor()

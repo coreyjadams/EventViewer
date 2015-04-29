@@ -57,14 +57,17 @@ namespace larlite {
     // Do that later.
 
     // Need to loop over the file 7 times to get all the cards
-    for (int i_card = 0; i_card < n_cards; i_card ++){
+    for (int i_card = 0; i_card < _n_cards; i_card ++){
       // Set all the branch addresses for this card.
       // For each channel, can use card + channel to map
       // to larsoft channel.  Then, use larsoft channel
       // to map to the wire location.
-      for(int channel = 0; channel < n_channels; channel ++ ){
+      c -> SetBranchAddress("run",&_run);
+      c -> SetBranchAddress("spill",&_event_no);
 
-        int lar_channel = i_card*n_channels + channel;
+      for(int channel = 0; channel < _n_channels; channel ++ ){
+
+        int lar_channel = i_card*_n_channels + channel;
         int plane = geoService->ChannelToPlane(lar_channel);
         int wire  = geoService->ChannelToWire(lar_channel);
         // Now we know which part of the data to read this channel into;
@@ -74,21 +77,21 @@ namespace larlite {
             &(wiredata->at(plane).at(wire)[0]),
             & (branches.at(channel)) );
       }
-      c -> GetEntry(current_event*n_cards + i_card);
+      c -> GetEntry(_current_event*_n_cards + i_card);
     }
-    nextEvent();
+
   }
 
   // This is the function that actually reads in an event
   void DrawLariatDaq::nextEvent(){
 
-    if (current_event >= n_events){
-      std::cout << "On Event " << current_event << std::endl;
+    if (_current_event >= _n_events){
+      std::cout << "On Event " << _current_event << std::endl;
       std::cout << "Warning, end of file reached, select a new file.\n";
       return;
     }
     else{
-      current_event ++;
+      _current_event ++;
       readData();
     }
 
@@ -97,17 +100,31 @@ namespace larlite {
 
   void DrawLariatDaq::prevEvent(){
 
-    if (current_event <= 0){
-      std::cout << "On event " << current_event << std::endl;
+    if (_current_event <= 0){
+      std::cout << "On event " << _current_event << std::endl;
       std::cout << "Warning, at beginning of file, can not go backwards.\n";
       return;
     }
     else{
-      current_event --;
+      _current_event --;
       readData();
     }
 
     return;
+
+  }
+
+  void DrawLariatDaq::goToEvent(int e){
+    if (e < 0){
+      std::cout << "Selected event is too low.\n";
+      return;
+    }
+    if (e >= _n_events){
+      std::cout << "Selected event is too high.\n";
+      return;
+    }
+    _current_event = e;
+    readData();
 
   }
 
@@ -123,11 +140,10 @@ namespace larlite {
     else{
       // The file exists, try to read it.
       inputFile = s;
-      current_event = 0;
+      _current_event = 0;
       c -> Reset();
       c -> Add(inputFile.c_str());
-      n_events  = c -> GetEntries() / n_cards;
-      std::cout << "n_events is " << n_events << std::endl;
+      _n_events  = c -> GetEntries() / _n_cards;
       readData();
     }
   }
