@@ -68,10 +68,10 @@ namespace larlite {
     // much much easier.
 
     // Function to get the data by plane:
-    const std::vector<std::vector<unsigned short>> & getDataByPlane(unsigned int p) const;
+    const std::vector<std::vector<float>> & getDataByPlane(unsigned int p) const;
 
     // Function to get wire data by plane and wire:
-    const std::vector<unsigned short> & getWireData(unsigned int plane, unsigned int wire) const;
+    const std::vector<float> & getWireData(unsigned int plane, unsigned int wire) const;
 
     void nextEvent();
     void prevEvent();
@@ -87,6 +87,7 @@ namespace larlite {
     
     //vector of [tpc][wire][time]
     std::vector<std::vector<std::vector<unsigned short>>> * wiredata;
+    std::vector<std::vector<std::vector<float>>> * wiredataOUT;
     // std::vector<unsigned short> * data;
 
     std::vector< TBranch *> branches;
@@ -110,6 +111,8 @@ namespace larlite {
 
     // Need some private worker functions to handle file i/o
     void readData();
+
+    int getLarsoftChannel(int & asic, int & channelOnAsic);
   };
 }
 #endif

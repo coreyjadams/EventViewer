@@ -112,9 +112,20 @@ class evd(QtGui.QWidget):
         self._drawWireOption.stateChanged.connect(self.drawWireOption)
 
         # ColorMap used to color data:
-        self._cmap = pg.GradientWidget(orientation='top')
-        # self._cmap.resize(1,1)
-        self._colorMapCollection = {'ticks': [(0, (30, 30, 255, 255)), (0.33333, (0, 255, 255, 255)), (0.66666, (255,255,100,255)), (1, (255, 0, 0, 255))], 'mode': 'rgb'}
+        self._cmap = pg.GradientWidget(orientation='left')
+        self._cmap.resize(1,1)
+        if self._mode == "daq":
+          self._colorMapCollection = {'ticks': [(0.45, (30, 30, 255, 255)),
+                                                (0.6,  (0, 255, 255, 255)), 
+                                                (0.8, (0,255,0,255)), 
+                                                (1, (255, 0, 0, 255))], 
+                                                'mode': 'rgb'}
+        else:
+          self._colorMapCollection = {'ticks': [(0, (30, 30, 255, 255)),
+                                                (0.33333, (0, 255, 255, 255)), 
+                                                (0.66666, (255,255,100,255)), 
+                                                (1, (255, 0, 0, 255))], 
+                                                'mode': 'rgb'}
         self._blankMapCollection = {'ticks': [(0, (255, 255, 255, 255)), (1, (255, 255, 255, 255))], 'mode': 'rgb'}
         self._cmap.restoreState(self._colorMapCollection)
         self._cmap.sigGradientChanged.connect(self.refreshGradient)
@@ -142,7 +153,8 @@ class evd(QtGui.QWidget):
         self._eventControlBox.addWidget(self._prevButton)
         self._eventControlBox.addWidget(self._fileSelectButton)
         # self._eventControlBox.addWidget(self._colorButton)
-        # self._eventControlBox.addWidget(self._cmap)
+        # if self._mode == "daq":
+            # self._eventControlBox.addWidget(self._cmap)
         
         # Add labels for the hits and clusters:
         # Set up the labels that hold the data:
