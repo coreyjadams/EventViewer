@@ -110,7 +110,7 @@ class evd_drawer(pg.GraphicsLayoutWidget):
     def __init__(self):
         super(evd_drawer, self).__init__()
         # add a view box, which is a widget that allows an image to be shown
-        self._view = self.addViewBox()
+        self._view = self.addViewBox(border='k')
         # add an image item which handles drawing (and refreshing) the image
         self._item = pg.ImageItem()
         self._view.addItem(self._item)
@@ -126,6 +126,7 @@ class evd_drawer(pg.GraphicsLayoutWidget):
         self._time2cm = 0.2
         self._wRange  = []
         self._tRange  = 2000 
+        self.setBackground('w')
 
     def mouseMoved(self, pos):
         self.q = self._item.mapFromScene(pos)

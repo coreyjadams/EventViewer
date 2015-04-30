@@ -369,7 +369,7 @@ class evd(QtGui.QWidget):
       d = self._baseData._blankData  
       self._cmap.restoreState(self._blankMapCollection)
       for i in range (0, self._baseData._nviews):
-          self._drawerList[i]._item.setImage(image=d[i], scale=self._baseData._aspectRatio)
+          self._drawerList[i]._item.setImage(image=None, scale=self._baseData._aspectRatio)
           self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
 
 
