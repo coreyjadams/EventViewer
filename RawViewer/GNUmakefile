@@ -30,6 +30,6 @@ CXXFLAGS +=  `root-config --cflags`
 
 # call the common GNUmakefile
 LDFLAGS += $(shell larlite-config --libs)
-LDFLAGS += $(shell python-config --libs)
+LDFLAGS += -L$(shell python-config --prefix)
 include $(LARLITE_BASEDIR)/Makefile/GNUmakefile.CORE
 
