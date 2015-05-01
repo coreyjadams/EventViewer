@@ -112,9 +112,21 @@ class evd(QtGui.QWidget):
         self._drawWireOption.stateChanged.connect(self.drawWireOption)
 
         # ColorMap used to color data:
-        self._cmap = pg.GradientWidget(orientation='top')
-        # self._cmap.resize(1,1)
-        self._colorMapCollection = {'ticks': [(0, (30, 30, 255, 255)), (0.33333, (0, 255, 255, 255)), (0.66666, (255,255,100,255)), (1, (255, 0, 0, 255))], 'mode': 'rgb'}
+        self._cmap = pg.GradientWidget(orientation='left')
+        self._cmap.resize(1,1)
+        if self._mode == "daq":
+          self._colorMapCollection = {'ticks': [(0.0,  (30,  30, 255, 255)),
+                                                (0.15, (30,  30, 255, 255)), 
+                                                (0.6,  (0,  255, 255, 255)), 
+                                                (0.8,  (0,  255, 0,   255)), 
+                                                (1,    (255,  0, 0,   255))], 
+                                                'mode': 'rgb'}
+        else:
+          self._colorMapCollection = {'ticks': [(0, (30, 30, 255, 255)),
+                                                (0.33333, (0, 255, 255, 255)), 
+                                                (0.66666, (255,255,100,255)), 
+                                                (1, (255, 0, 0, 255))], 
+                                                'mode': 'rgb'}
         self._blankMapCollection = {'ticks': [(0, (255, 255, 255, 255)), (1, (255, 255, 255, 255))], 'mode': 'rgb'}
         self._cmap.restoreState(self._colorMapCollection)
         self._cmap.sigGradientChanged.connect(self.refreshGradient)
@@ -142,7 +154,8 @@ class evd(QtGui.QWidget):
         self._eventControlBox.addWidget(self._prevButton)
         self._eventControlBox.addWidget(self._fileSelectButton)
         # self._eventControlBox.addWidget(self._colorButton)
-        # self._eventControlBox.addWidget(self._cmap)
+        # if self._mode == "daq":
+            # self._eventControlBox.addWidget(self._cmap)
         
         # Add labels for the hits and clusters:
         # Set up the labels that hold the data:
@@ -351,16 +364,19 @@ class evd(QtGui.QWidget):
           d = self._baseData._dataHandle._daughterProcesses['wire'].get_img()
           self._cmap.restoreState(self._colorMapCollection)
           for i in range (0, self._baseData._nviews):
-              self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
-              self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
+            self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
+            self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
           self.drawWire(1,1)
       elif self._mode == "daq":
         if self._baseData._dataHandle._hasFile:
           d = self._baseData._dataHandle.get_img()
           self._cmap.restoreState(self._colorMapCollection)
           for i in range (0, self._baseData._nviews):
-              self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
-              self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
+            # print self._baseData._levels[i]
+            self._drawerList[i]._item.setImage(d[i], 
+                                                scale=self._baseData._aspectRatio,
+                                                levels=self._baseData._levels[i])
+            self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
           self.drawWire(1,1)
 
 
@@ -369,7 +385,7 @@ class evd(QtGui.QWidget):
       d = self._baseData._blankData  
       self._cmap.restoreState(self._blankMapCollection)
       for i in range (0, self._baseData._nviews):
-          self._drawerList[i]._item.setImage(image=d[i], scale=self._baseData._aspectRatio)
+          self._drawerList[i]._item.setImage(image=None, scale=self._baseData._aspectRatio)
           self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
 
 

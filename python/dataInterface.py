@@ -24,14 +24,14 @@ class rawDaqInterface(object):
   def get_img(self):
     d = []
     for i in range(0,self._nviews):
-      d.append(np.array(self._c2p.ConvertShort(self._process.getDataByPlane(i))) )
+      d.append(np.array(self._c2p.Convert(self._process.getDataByPlane(i))) )
     return d
 
   def get_wire(self, plane, wire):
     if plane > self._nviews:
       return
     if wire > 0 and wire < larutil.Geometry.GetME().Nwires(plane):
-      return np.array(self._c2p.ConvertShort(self._process.getWireData(plane,wire)))
+      return np.array(self._c2p.Convert(self._process.getWireData(plane,wire)))
 
   def set_input_file(self, file):
     self._file = file
@@ -180,6 +180,19 @@ class baseDataInterface(object):
       self._dataHandle = rawDaqInterface()
     else:
       self._dataHandle = larliteInterface()
+
+    # hold the drawing levels for each plane:
+    self._levels = []
+    if geometry == "argoneut": 
+      self._levels.append( (-15,15 ) )
+      self._levels.append( (-10,30 ) )
+    if geometry == "lariat":
+      self._levels.append( (-15,15 ) )
+      self._levels.append( (-10,30 ) )
+    else:
+      self._levels.append( (-15,15 ) )
+      self._levels.append( (-15,15 ) )
+      self._levels.append( (-10,30 ) )
 
 
   def init_geom(self):

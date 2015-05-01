@@ -10,6 +10,7 @@ namespace larlite {
 
   DrawLariatDaq::DrawLariatDaq(){ 
     wiredata = new std::vector<std::vector<std::vector<unsigned short> > > ;
+    wiredataOUT = new std::vector<std::vector<std::vector<float> > > ;
     branches.resize(64);
     c = new TChain("DataQuality/v1740");
     initialize();
@@ -45,6 +46,20 @@ namespace larlite {
         }
     }
 
+    if (wiredataOUT -> size() != geoService -> Nviews())
+      wiredataOUT->resize(geoService -> Nviews());
+     
+    // resize to the right number of planes
+    for (unsigned int p = 0; p < geoService -> Nviews(); p ++){
+      // resize to the right number of wires
+      if (wiredataOUT->at(p).size() != geoService->Nwires(p) )
+        wiredataOUT->at(p).resize(geoService->Nwires(p));
+        // Resize the wires to the right length
+        for (auto & vec : wiredataOUT->at(p)){
+          vec.resize(1536);
+        }
+    }
+
     // std::cout << "\n\nCompleted initialize.\n\n";
     return;
 
@@ -67,9 +82,12 @@ namespace larlite {
 
       for(int channel = 0; channel < _n_channels; channel ++ ){
 
-        int lar_channel = i_card*_n_channels + channel;
+        if (i_card == _n_cards -1 && channel >= _n_channels/2) continue;
+        int lar_channel = getLarsoftChannel(i_card, channel);
+        // std::cout << "Card " << i_card << "\tchannel " << channel << "\tlarCH " << lar_channel << std::endl;
         int plane = geoService->ChannelToPlane(lar_channel);
         int wire  = geoService->ChannelToWire(lar_channel);
+        // std::cout << "Card" << i_card << "\tchannel " << channel << "\t(p,w) " << plane << ", " << wire << std::endl;
         // Now we know which part of the data to read this channel into;
         char name[20];
         sprintf(name,"channel_%i",channel);
@@ -78,6 +96,24 @@ namespace larlite {
             & (branches.at(channel)) );
       }
       c -> GetEntry(_current_event*_n_cards + i_card);
+    }
+
+    // The wire data needs to be pedestal subtracted.
+    int i_plane = 0;
+    for (auto & plane : *wiredata){
+      float pedestal =0;
+      int i_wire = 0;
+      for (auto & wire : plane){
+        for (auto & tick : wire){
+          pedestal += tick;
+        }
+        pedestal /= 1536;
+        for (unsigned int tick = 0; tick < wire.size(); tick++){
+          wiredataOUT->at(i_plane).at(i_wire).at(tick) = wire.at(tick) - pedestal;
+        }
+        i_wire ++;
+      }
+      i_plane ++;
     }
 
   }
@@ -148,67 +184,25 @@ namespace larlite {
     }
   }
 
-  // bool DrawLariatDaq::analyze(storage_manager* storage) {
-  
-  //   //
-  //   // Do your event-by-event analysis here. This function is called for 
-  //   // each event in the loop. You have "storage" pointer which contains 
-  //   // event-wise data. To see what is available, check the "Manual.pdf":
-  //   //
-  //   // http://microboone-docdb.fnal.gov:8080/cgi-bin/ShowDocument?docid=3183
-  //   // 
-  //   // Or you can refer to Base/DataFormatConstants.hh for available data type
-  //   // enum values. Here is one example of getting PMT waveform collection.
-  //   //
-  //   // event_fifo* my_pmtfifo_v = (event_fifo*)(storage->get_data(DATA::PMFIFO));
-  //   //
-  //   // if( event_fifo )
-  //   //
-  //   //   std::cout << "Event ID: " << my_pmtfifo_v->event_id() << std::endl;
-  //   //
+  int DrawLariatDaq::getLarsoftChannel(int & asic, int & channelOnBoard){
+    int lar_channel = asic*_n_channels + channelOnBoard;
+    if (lar_channel < 240)
+      lar_channel = 239 - lar_channel;
+    else{
+      lar_channel = 479 - (lar_channel-240);
+    }
+    return lar_channel;
+  }
 
-  //   // This is an event viewer.  In particular, this handles raw wire signal drawing.
-  //   // So, obviously, first thing to do is to get the wires.
-  //   auto WireHandle = storage->get_data<larlite::event_wire>(producer);
-    
-
-  //   for (auto & wire: *WireHandle){
-  //       unsigned int ch = wire.Channel();
-  //       wiredata->at(geoService->ChannelToPlane(ch))[geoService->ChannelToWire(ch)] = wire.Signal();
-  //   }
-
-  //   return true;
-  // }
-
-  // bool DrawLariatDaq::finalize() {
-
-  //   // This function is called at the end of event loop.
-  //   // Do all variable finalization you wish to do here.
-  //   // If you need, you can store your ROOT class instance in the output
-  //   // file. You have an access to the output file through "_fout" pointer.
-  //   //
-  //   // Say you made a histogram pointer h1 to store. You can do this:
-  //   //
-  //   // if(_fout) { _fout->cd(); h1->Write(); }
-  //   //
-  //   // else 
-  //   //   print(MSG::ERROR,__FUNCTION__,"Did not find an output file pointer!!! File not opened?");
-  //   //
-  
-  //   delete wiredata;
-
-  //   return true;
-  // }
-
-  const std::vector<std::vector<unsigned short>> & DrawLariatDaq::getDataByPlane(unsigned int p) const{
-    static std::vector<std::vector<unsigned short>> returnNull;
+  const std::vector<std::vector<float>> & DrawLariatDaq::getDataByPlane(unsigned int p) const{
+    static std::vector<std::vector<float>> returnNull;
     if (p >= geoService->Nviews()){
       std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
       return returnNull;
     }
     else{
-      if (wiredata !=0){
-        return wiredata->at(p);
+      if (wiredataOUT !=0){
+        return wiredataOUT->at(p);
       }
       else{
         return returnNull;
@@ -217,8 +211,8 @@ namespace larlite {
     
   }
 
-  const std::vector<unsigned short> & DrawLariatDaq::getWireData(unsigned int plane, unsigned int wire) const{
-    static std::vector<unsigned short> returnNull;
+  const std::vector<float> & DrawLariatDaq::getWireData(unsigned int plane, unsigned int wire) const{
+    static std::vector<float> returnNull;
     if (plane >= geoService->Nviews()){
       std::cerr << "ERROR: Request for nonexistant plane " << plane << std::endl;
       return returnNull;
@@ -229,12 +223,12 @@ namespace larlite {
     }
     else{
       // std::cout << "Called get wire, printing a couple values...\n";
-      // std::cout << wiredata->at(plane).at(wire)[0] << std::endl;
-      // std::cout << wiredata->at(plane).at(wire)[1] << std::endl;
-      // std::cout << wiredata->at(plane).at(wire)[2] << std::endl;
-      // std::cout << wiredata->at(plane).at(wire)[3] << std::endl;
-      if (wiredata !=0){
-        return wiredata->at(plane).at(wire);
+      // std::cout << wiredataOUT->at(plane).at(wire)[0] << std::endl;
+      // std::cout << wiredataOUT->at(plane).at(wire)[1] << std::endl;
+      // std::cout << wiredataOUT->at(plane).at(wire)[2] << std::endl;
+      // std::cout << wiredataOUT->at(plane).at(wire)[3] << std::endl;
+      if (wiredataOUT !=0){
+        return wiredataOUT->at(plane).at(wire);
       }
       else{
         return returnNull;
