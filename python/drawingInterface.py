@@ -112,7 +112,7 @@ class evd_drawer(pg.GraphicsLayoutWidget):
         # add a view box, which is a widget that allows an image to be shown
         self._view = self.addViewBox(border='k')
         # add an image item which handles drawing (and refreshing) the image
-        self._item = pg.ImageItem()
+        self._item = pg.ImageItem(useOpenGL=True)
         self._view.addItem(self._item)
         # connect the scene to click events, used to get wires
         self.scene().sigMouseClicked.connect(self.mouseClicked)

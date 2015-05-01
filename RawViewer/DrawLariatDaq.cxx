@@ -82,9 +82,12 @@ namespace larlite {
 
       for(int channel = 0; channel < _n_channels; channel ++ ){
 
+        if (i_card == _n_cards -1 && channel >= _n_channels/2) continue;
         int lar_channel = getLarsoftChannel(i_card, channel);
+        // std::cout << "Card " << i_card << "\tchannel " << channel << "\tlarCH " << lar_channel << std::endl;
         int plane = geoService->ChannelToPlane(lar_channel);
         int wire  = geoService->ChannelToWire(lar_channel);
+        // std::cout << "Card" << i_card << "\tchannel " << channel << "\t(p,w) " << plane << ", " << wire << std::endl;
         // Now we know which part of the data to read this channel into;
         char name[20];
         sprintf(name,"channel_%i",channel);
@@ -183,11 +186,11 @@ namespace larlite {
 
   int DrawLariatDaq::getLarsoftChannel(int & asic, int & channelOnBoard){
     int lar_channel = asic*_n_channels + channelOnBoard;
-    // if (lar_channel < 240)
-    //   lar_channel = 240 - lar_channel;
-    // else{
-    //   lar_channel = 480 - lar_channel;
-    // }
+    if (lar_channel < 240)
+      lar_channel = 239 - lar_channel;
+    else{
+      lar_channel = 479 - (lar_channel-240);
+    }
     return lar_channel;
   }
 

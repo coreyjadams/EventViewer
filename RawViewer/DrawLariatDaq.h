@@ -106,7 +106,7 @@ namespace larlite {
     unsigned int _event_no;
     unsigned int _run;
 
-    const int _n_cards = 7;
+    const int _n_cards = 8;
     const int _n_channels = 64;
 
     // Need some private worker functions to handle file i/o

@@ -181,6 +181,19 @@ class baseDataInterface(object):
     else:
       self._dataHandle = larliteInterface()
 
+    # hold the drawing levels for each plane:
+    self._levels = []
+    if geometry == "argoneut": 
+      self._levels.append( (-15,15 ) )
+      self._levels.append( (-10,30 ) )
+    if geometry == "lariat":
+      self._levels.append( (-15,15 ) )
+      self._levels.append( (-10,30 ) )
+    else:
+      self._levels.append( (-15,15 ) )
+      self._levels.append( (-15,15 ) )
+      self._levels.append( (-10,30 ) )
+
 
   def init_geom(self):
     self._nviews=larutil.Geometry.GetME().Nviews()

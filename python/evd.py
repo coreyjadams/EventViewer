@@ -115,10 +115,11 @@ class evd(QtGui.QWidget):
         self._cmap = pg.GradientWidget(orientation='left')
         self._cmap.resize(1,1)
         if self._mode == "daq":
-          self._colorMapCollection = {'ticks': [(0.45, (30, 30, 255, 255)),
-                                                (0.6,  (0, 255, 255, 255)), 
-                                                (0.8, (0,255,0,255)), 
-                                                (1, (255, 0, 0, 255))], 
+          self._colorMapCollection = {'ticks': [(0.0,  (30,  30, 255, 255)),
+                                                (0.15, (30,  30, 255, 255)), 
+                                                (0.6,  (0,  255, 255, 255)), 
+                                                (0.8,  (0,  255, 0,   255)), 
+                                                (1,    (255,  0, 0,   255))], 
                                                 'mode': 'rgb'}
         else:
           self._colorMapCollection = {'ticks': [(0, (30, 30, 255, 255)),
@@ -363,16 +364,19 @@ class evd(QtGui.QWidget):
           d = self._baseData._dataHandle._daughterProcesses['wire'].get_img()
           self._cmap.restoreState(self._colorMapCollection)
           for i in range (0, self._baseData._nviews):
-              self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
-              self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
+            self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
+            self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
           self.drawWire(1,1)
       elif self._mode == "daq":
         if self._baseData._dataHandle._hasFile:
           d = self._baseData._dataHandle.get_img()
           self._cmap.restoreState(self._colorMapCollection)
           for i in range (0, self._baseData._nviews):
-              self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
-              self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
+            # print self._baseData._levels[i]
+            self._drawerList[i]._item.setImage(d[i], 
+                                                scale=self._baseData._aspectRatio,
+                                                levels=self._baseData._levels[i])
+            self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
           self.drawWire(1,1)
 
 
