@@ -71,6 +71,8 @@ namespace larlite {
     // Want to be sure that the TChain is ready to go...
     // Do that later.
 
+    std::map<int,int> lar_channel_usage;
+
     // Need to loop over the file 7 times to get all the cards
     for (int i_card = 0; i_card < _n_cards; i_card ++){
       // Set all the branch addresses for this card.
@@ -82,11 +84,40 @@ namespace larlite {
 
       for(int channel = 0; channel < _n_channels; channel ++ ){
 
-        if (i_card == _n_cards -1 && channel >= _n_channels/2) continue;
-        int lar_channel = getLarsoftChannel(i_card, channel);
-        // std::cout << "Card " << i_card << "\tchannel " << channel << "\tlarCH " << lar_channel << std::endl;
-        int plane = geoService->ChannelToPlane(lar_channel);
-        int wire  = geoService->ChannelToWire(lar_channel);
+        // // Skip the extra channels:
+        // if (i_card == _n_cards -1 && channel >= _n_channels/2) {
+        //   continue;
+        // }
+
+        // int lar_channel = getLarsoftChannel(i_card, channel);
+        // lar_channel_usage[lar_channel] ++;
+        // if (lar_channel_usage[lar_channel] > 1){
+        //   std::cout << "Found a duplicate channel at " << lar_channel << std::endl;
+        //   // continue;
+        // }
+        // // std::cout << "Card " << i_card << "\tchannel " << channel << "\tlarCH " << lar_channel << std::endl;
+        // int plane = geoService->ChannelToPlane(lar_channel);
+        // int wire  = geoService->ChannelToWire(lar_channel);
+        int plane(0),wire(0);
+        // Try another, more stupid and simple way
+        int ch = i_card*_n_channels + channel;
+        // if (ch >= 480 ) continue;
+        if (ch < 240 ){
+          plane = 0;
+          wire = 239 - ch;
+        }
+        else if (ch < 480 && ch >= 240){
+          plane = 1;
+          wire = 479-ch;
+        }
+
+        // if (plane == 1)
+          // std::cout << "["<<i_card <<", " << channel << "] -> "
+                    // << ch << " -> [" << plane << ", " << wire << "]\n";
+        // else if (i_card == 7)
+          // std::cout << "Wire is " << wire << std::endl;
+        // if (wire < 0) continue;
+        // if (wire > 239) continue;
         // std::cout << "Card" << i_card << "\tchannel " << channel << "\t(p,w) " << plane << ", " << wire << std::endl;
         // Now we know which part of the data to read this channel into;
         char name[20];
@@ -94,6 +125,10 @@ namespace larlite {
         c -> SetBranchAddress(name,
             &(wiredata->at(plane).at(wire)[0]),
             & (branches.at(channel)) );
+
+        if (lar_channel_usage[ch] > 1){
+          std::cout << "Found a duplicate channel at " << ch << std::endl;
+        }
       }
       c -> GetEntry(_current_event*_n_cards + i_card);
     }
@@ -104,6 +139,11 @@ namespace larlite {
       float pedestal =0;
       int i_wire = 0;
       for (auto & wire : plane){
+        // debug printout: get the first value of each wire:
+        // if (i_plane == 1 && i_wire < 64)
+        //   std::cout << "[" << i_plane << ", " << i_wire << "]: {"
+        //             << wire.at(0) << ", " << wire.at(1)
+        //             << ", " << wire.at(2) << "...}\n"; 
         for (auto & tick : wire){
           pedestal += tick;
         }
