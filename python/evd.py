@@ -92,6 +92,9 @@ class evd(QtGui.QWidget):
         self._fileSelectButton = QtGui.QPushButton("Select File")
         self._fileSelectButton.clicked.connect(self.selectFile)
 
+        self._screenCaptureButton = QtGui.QPushButton("Capture Screen")
+        self._screenCaptureButton.clicked.connect(self.screenCapture)
+
         # Labels and text entry to display the event number
 
         self._eventEntry = QtGui.QLineEdit()
@@ -220,6 +223,7 @@ class evd(QtGui.QWidget):
         # grid.addLayout(self._eventControlBox,2,0,nviews+1,1)
         grid.addLayout(self._dataBox,0,1,2,2)
         grid.addWidget(self.statusBar,2,0,1,2)
+        grid.addWidget(self._screenCaptureButton,2,2,1,1)
         self.setLayout(grid)    
 
         
@@ -579,6 +583,17 @@ class evd(QtGui.QWidget):
     def keyPressInterrupt(self,e):
         print "Interrupting function!"
 
+
+    def screenCapture(self):
+        print "Screen Capture!"
+        "Prints the current diagram"
+        f,filt = QtGui.QFileDialog.getSaveFileNameAndFilter(caption="Save File",
+            filter="PNG (*.png);;JPG (*.jpg);;All Files (*)")
+        print f
+        # print filt
+        # Print
+        pixmapImage = QtGui.QPixmap.grabWidget(self)
+        pixmapImage.save(f,"PNG")
 
 def main():
     
