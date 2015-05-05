@@ -90,7 +90,8 @@ class fileWatcher(threading.Thread):
                 print "Attempting to refresh picture"
                 self._func(fileToDraw)
                 self._prevFile = fileToDraw
-            print "File has changed but does not appear to be a root file."
+            else:
+                print "File has changed but does not appear to be a root file."
 
 
     # This sets the function that gets called each iteration        
