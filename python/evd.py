@@ -72,7 +72,7 @@ class fileWatcher(threading.Thread):
         self._fileToWatch = file
 
     def run(self):
-        while not self.stopped.wait(0.5):
+        while not self.stopped.wait(1.5):
             # print "Thread called"
             # open the file:
             try:
