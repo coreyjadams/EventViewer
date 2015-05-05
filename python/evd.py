@@ -73,7 +73,7 @@ class fileWatcher(threading.Thread):
 
     def run(self):
         while not self.stopped.wait(1.5):
-            # print "Thread called"
+            print "Thread called"
             # open the file:
             try:
                 f = open(self._fileToWatch)
@@ -82,12 +82,15 @@ class fileWatcher(threading.Thread):
                 raise e
             # At this point, the file exists.
             fileToDraw = f.readline()
-            # print fileToDraw
+            print "Contents of file are: ", fileToDraw
             if fileToDraw == self._prevFile:
+                print "Not drawing because file has not changed."
                 continue
             if fileToDraw.endswith(".root"):
+                print "Attempting to refresh picture"
                 self._func(fileToDraw)
                 self._prevFile = fileToDraw
+            print "File has changed but does not appear to be a root file."
 
 
     # This sets the function that gets called each iteration        
@@ -176,7 +179,7 @@ class evd(QtGui.QWidget):
     # Do not call this yourself, use updateFile instead
     def autoUpdateFile(self,file):
         # Checking that the file is a .root file is left to the thread
-        # print "Called to update to file ", file
+        print "Called function to update image ", file
         self._filePath = file
         self.initData()
         self.updateDataChoices()
