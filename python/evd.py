@@ -588,7 +588,7 @@ class evd(QtGui.QWidget):
         print "Screen Capture!"
         dialog = QtGui.QFileDialog()
         r,e = self._baseData._dataHandle.getRunAndEvent()
-        name = "evd_" + self._mode + "_R" + str(r)
+        name = "evd_" + self._geometry + "_R" + str(r)
         name = name + "_E" + str(e) + ".png"
         f = dialog.getSaveFileName(self,"Save File",name,
             "PNG (*.png);;JPG (*.jpg);;All Files (*)")

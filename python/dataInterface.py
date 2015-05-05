@@ -189,6 +189,7 @@ class baseDataInterface(object):
     if geometry == "lariat":
       self._levels.append( (-15,15 ) )
       self._levels.append( (-10,30 ) )
+      self._tRange = 1536
     else:
       self._levels.append( (-15,15 ) )
       self._levels.append( (-15,15 ) )
@@ -204,12 +205,16 @@ class baseDataInterface(object):
     # Get the ranges:
     self._wRange = []
     for v in range(0, self._nviews):
-     self._wRange.append(larutil.Geometry.GetME().Nwires(0))
+      self._wRange.append(larutil.Geometry.GetME().Nwires(0))
     self._tRange = larutil.DetectorProperties.GetME().ReadOutWindowSize()
 
     # self.xmin
   
   def config_argo(self):
+    larutil.LArUtilManager.Reconfigure(fmwk.geo.kArgoNeuT)
+    self.init_geom()
+
+  def config_lariat(self):
     larutil.LArUtilManager.Reconfigure(fmwk.geo.kArgoNeuT)
     self.init_geom()
 
