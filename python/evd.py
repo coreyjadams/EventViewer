@@ -61,17 +61,122 @@ class ComboBoxWithKeyConnect(QtGui.QComboBox):
         else:
             super(ComboBoxWithKeyConnect,self).keyPressEvent(e)
 
+import threading
+class fileWatcher(threading.Thread):
+    """docstring for fileWatcher"""
+    def __init__(self, event,file):
+        super(fileWatcher, self).__init__()
+        self.stopped = event
+        # keep track of the last file displayed, only send a signal when it changes
+        self._prevFile=None
+        self._fileToWatch = file
+
+    def run(self):
+        while not self.stopped.wait(1.5):
+            print "Thread called"
+            # open the file:
+            try:
+                f = open(self._fileToWatch)
+            except Exception, e:
+                print "The file selected for watching does not exist!"
+                raise e
+            # At this point, the file exists.
+            fileToDraw = f.readline()
+            print fileToDraw
+            # if fileToDraw.endswith(".root")
+
+    # This sets the function that gets called each iteration        
+    def connect(self, func):
+        self._func = func
+
 class evd(QtGui.QWidget):
 
 
     def __init__(self, geometry,mode,fileName=None):
         super(evd, self).__init__()
         # self._filePath = "/media/cadams/data_linux/argoneut_mc/nue_larlite_all.root"
-        self._filePath = fileName
+        self._filePath = None
+        # initUI should not do ANY data handling, it should only get the interface loaded
         self._mode = mode
         self._geometry = geometry
         self._baseData = baseDataInterface(geometry,mode)
         self.initUI()
+
+        self.updateFile(fileName)
+
+
+    def closeEvent(self,event):
+        if self._running:
+            self.stopRun()
+
+    def parseFileName(self,fileName):
+        if fileName.endswith(".root"):
+            # this is a data file, set it to display:
+            self._filePath = fileName
+            self.initData()
+            self.updateDataChoices
+            self.goToEvent(0)
+
+        # # If there was a file passed on commandline, try to use it:
+        # if (self._filePath != None):
+        #     self.initData()
+        #     self.updateDataChoices()
+        #     self.goToEvent(0)
+
+        # self.setRangeToMax()
+
+        # self.updateImage()
+
+            # once the UI is initialized it will update this.
+        elif fileName.endswith(".txt"):
+            # parse the txt file to get the file name
+            # automatically start a run of autoupdates
+            self._stopFlag = threading.Event()
+            self._watcher = fileWatcher(self._stopFlag, fileName)
+            self._watcher.connect(self.autoUpdateFile)
+            self.startRun()
+        else:
+            self._filePath = None
+
+    def startRun(self):
+        self._runControlButton.setText("Stop Run")
+        self._running = True
+        self._watcher.start()
+        pass
+
+    def stopRun(self):
+        self._runControlButton.setText("Start Run")
+        self._running = False
+        self._stopFlag.set()
+        pass
+
+    def runControl(self):
+        if not self._running:
+            self.startRun()
+            return
+        else:
+            self.stopRun()
+
+    def updateFile(self, file):
+        if self._running:
+            self.stopRun()
+        self.parseFileName(file)
+        self._filePath = file
+
+    # this function is ONLY meant to be called by a thread for auto updating.
+    # Do not call this yourself, use updateFile instead
+    def autoUpdateFile(self,file):
+        # Checking that the file exists and is a .root file is left to the thread
+        # self._filePath = file
+        # self.initData()
+        # self.updateDataChoices
+        # self.goToEvent(0)
+        print "Called to update to file ", file
+
+    def quit(self):
+        if self._running:
+            self.stopRun()
+        QtCore.QCoreApplication.instance().quit()
 
     def initUI(self):
 
@@ -81,7 +186,7 @@ class evd(QtGui.QWidget):
         self._prevButton = QtGui.QPushButton("Previous")
         self._quitButton = QtGui.QPushButton("Quit")
         # Bind quit to the proper functionality
-        self._quitButton.clicked.connect(QtCore.QCoreApplication.instance().quit)
+        self._quitButton.clicked.connect(self.quit)
         self._nextButton.clicked.connect(self.nextEvent)
         self._prevButton.clicked.connect(self.prevEvent)
 
@@ -94,6 +199,11 @@ class evd(QtGui.QWidget):
 
         self._screenCaptureButton = QtGui.QPushButton("Capture Screen")
         self._screenCaptureButton.clicked.connect(self.screenCapture)
+
+        self._runControlButton = QtGui.QPushButton("Start Run")
+        self._runControlButton.clicked.connect(self.runControl)
+        self._runControlButton.setStyleSheet("background-color: red")
+        self._running = False
 
         # Labels and text entry to display the event number
 
@@ -156,6 +266,8 @@ class evd(QtGui.QWidget):
         self._eventControlBox.addWidget(self._nextButton)
         self._eventControlBox.addWidget(self._prevButton)
         self._eventControlBox.addWidget(self._fileSelectButton)
+        if self._mode == "daq":
+            self._eventControlBox.addWidget(self._runControlButton)
         # self._eventControlBox.addWidget(self._colorButton)
         # if self._mode == "daq":
             # self._eventControlBox.addWidget(self._cmap)
@@ -231,16 +343,6 @@ class evd(QtGui.QWidget):
         self.setWindowTitle('Event Display')    
         self.show()
 
-
-        # If there was a file passed on commandline, try to use it:
-        if (self._filePath != None):
-            self.initData()
-            self.updateDataChoices()
-            self.goToEvent(0)
-
-        self.setRangeToMax()
-
-        self.updateImage()
 
     def initDataChoices(self):
         # Create a tuple of options and their labels
@@ -358,7 +460,6 @@ class evd(QtGui.QWidget):
         #    to the interface and draw those things!
 
 
-    # What follows are functions to manage the next, prev events etc.
 
     def drawRaw(self):
       if self._mode != "daq":
@@ -559,10 +660,9 @@ class evd(QtGui.QWidget):
             self.update()
 
     def selectFile(self):
-        self._filePath = str(QtGui.QFileDialog.getOpenFileName())
-        self.initData()
-        self.updateDataChoices()
-        self.updateImage()
+        filePath = str(QtGui.QFileDialog.getOpenFileName())
+        self.updateFile(filePath)
+
 
     def keyPressEvent(self,e):
         # print "A key was pressed!"
@@ -619,7 +719,8 @@ def main():
     
     ex = evd(geometry,mode,args.file)
 
-    sys.exit(app.exec_())
+    app.exec_()
+    # sys.exit(app.exec_())
 
 
 if __name__ == '__main__':
