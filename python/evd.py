@@ -699,9 +699,13 @@ class evd(QtGui.QWidget):
 
     def screenCapture(self):
         print "Screen Capture!"
-        "Prints the current diagram"
-        f,filt = QtGui.QFileDialog.getSaveFileNameAndFilter(caption="Save File",
-            filter="PNG (*.png);;JPG (*.jpg);;All Files (*)")
+        dialog = QtGui.QFileDialog()
+        r,e = self._baseData._dataHandle.getRunAndEvent()
+        name = "evd_" + self._geometry + "_R" + str(r)
+        name = name + "_E" + str(e) + ".png"
+        f = dialog.getSaveFileName(self,"Save File",name,
+            "PNG (*.png);;JPG (*.jpg);;All Files (*)")
+
         print f
         # print filt
         # Print

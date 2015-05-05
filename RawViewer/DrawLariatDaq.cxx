@@ -27,6 +27,9 @@ namespace larlite {
 
   void DrawLariatDaq::initialize() {
 
+    _event_no=0;
+    _run=0;
+
     // Initialize the geoService object:
     geoService = larutil::Geometry::GetME();
 
