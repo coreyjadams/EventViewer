@@ -25,6 +25,7 @@ class rawDaqInterface(object):
     d = []
     for i in range(0,self._nviews):
       d.append(np.array(self._c2p.Convert(self._process.getDataByPlane(i))) )
+      # print "got a plane, here is a sample: ", d[i][0][0]
     return d
 
   def get_wire(self, plane, wire):
@@ -48,11 +49,11 @@ class rawDaqInterface(object):
       self._lastProcessed = self._event
 
   def next(self):
-    print "Called next"
+    # print "Called next"
     self._process.nextEvent()
 
   def prev(self):
-    print "Called prev"
+    # print "Called prev"
     self._process.prevEvent()
 
   def getRunAndEvent(self):

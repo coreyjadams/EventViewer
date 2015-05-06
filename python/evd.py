@@ -73,7 +73,7 @@ class fileWatcher(threading.Thread):
 
     def run(self):
         while not self.stopped.wait(1.5):
-            print "Thread called"
+            # print "Thread called"
             # open the file:
             try:
                 f = open(self._fileToWatch)
@@ -82,12 +82,12 @@ class fileWatcher(threading.Thread):
                 raise e
             # At this point, the file exists.
             fileToDraw = f.readline()
-            print "Contents of file are: ", fileToDraw
+            # print "Contents of file are: ", fileToDraw
             if fileToDraw == self._prevFile:
-                print "Not drawing because file has not changed."
+                # print "Not drawing because file has not changed."
                 continue
             if fileToDraw.endswith(".root"):
-                print "Attempting to refresh picture"
+                # print "Attempting to refresh picture"
                 self._func(fileToDraw)
                 self._prevFile = fileToDraw
             else:
@@ -180,7 +180,7 @@ class evd(QtGui.QWidget):
     # Do not call this yourself, use updateFile instead
     def autoUpdateFile(self,file):
         # Checking that the file is a .root file is left to the thread
-        print "Called function to update image ", file
+        # print "Called function to update image ", file
         self._filePath = file
         self.initData()
         self.updateDataChoices()
@@ -494,10 +494,11 @@ class evd(QtGui.QWidget):
           d = self._baseData._dataHandle.get_img()
           self._cmap.restoreState(self._colorMapCollection)
           for i in range (0, self._baseData._nviews):
-            # print self._baseData._levels[i]
+
             self._drawerList[i]._item.setImage(d[i], 
                                                 scale=self._baseData._aspectRatio,
                                                 levels=self._baseData._levels[i])
+            self._drawerList[i]._item.updateImage()
             self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
           self.drawWire(1,1)
 
