@@ -211,6 +211,7 @@ namespace larlite {
     // if the file isn't new, do nothing:
     if (s == inputFile) return;
     // check to see if this file exists.
+    std::cout << "Attempting to open file " << s << std::endl;
     std::ifstream ifile(s);
     if (!ifile.is_open()){
       std::cerr << "ERROR: Input file failed to open.\n";
@@ -223,6 +224,11 @@ namespace larlite {
       c -> Reset();
       c -> Add(inputFile.c_str());
       _n_events  = c -> GetEntries() / _n_cards;
+      if (_n_events == 0){
+        _run = 0;
+        _event_no = 0;
+        return;
+      }
       readData();
     }
   }
@@ -245,6 +251,11 @@ namespace larlite {
     }
     else{
       if (wiredataOUT !=0){
+        // std::cout << "Called get wire, printing a couple values...\n";
+        // std::cout << wiredataOUT->at(p).at(0)[0] << std::endl;
+        // std::cout << wiredataOUT->at(p).at(0)[1] << std::endl;
+        // std::cout << wiredataOUT->at(p).at(0)[2] << std::endl;
+        // std::cout << wiredataOUT->at(p).at(0)[3] << std::endl;
         return wiredataOUT->at(p);
       }
       else{
@@ -265,11 +276,7 @@ namespace larlite {
         return returnNull;
     }
     else{
-      // std::cout << "Called get wire, printing a couple values...\n";
-      // std::cout << wiredataOUT->at(plane).at(wire)[0] << std::endl;
-      // std::cout << wiredataOUT->at(plane).at(wire)[1] << std::endl;
-      // std::cout << wiredataOUT->at(plane).at(wire)[2] << std::endl;
-      // std::cout << wiredataOUT->at(plane).at(wire)[3] << std::endl;
+
       if (wiredataOUT !=0){
         return wiredataOUT->at(plane).at(wire);
       }
