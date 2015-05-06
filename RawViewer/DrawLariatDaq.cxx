@@ -8,10 +8,14 @@
 
 namespace larlite {
 
-  DrawLariatDaq::DrawLariatDaq(){ 
+  DrawLariatDaq::DrawLariatDaq(int ticks){ 
     wiredata = new std::vector<std::vector<std::vector<unsigned short> > > ;
     wiredataOUT = new std::vector<std::vector<std::vector<float> > > ;
     branches.resize(64);
+    if (ticks == -1)
+      _n_time_ticks = 1536;
+    else
+      _n_time_ticks = ticks;
     c = new TChain("DataQuality/v1740");
     initialize();
   }
@@ -45,7 +49,7 @@ namespace larlite {
         wiredata->at(p).resize(geoService->Nwires(p));
         // Resize the wires to the right length
         for (auto & vec : wiredata->at(p)){
-          vec.resize(1536);
+          vec.resize(_n_time_ticks);
         }
     }
 
@@ -59,7 +63,7 @@ namespace larlite {
         wiredataOUT->at(p).resize(geoService->Nwires(p));
         // Resize the wires to the right length
         for (auto & vec : wiredataOUT->at(p)){
-          vec.resize(1536);
+          vec.resize(_n_time_ticks);
         }
     }
 
@@ -150,7 +154,7 @@ namespace larlite {
         for (auto & tick : wire){
           pedestal += tick;
         }
-        pedestal /= 1536;
+        pedestal /= _n_time_ticks;
         for (unsigned int tick = 0; tick < wire.size(); tick++){
           wiredataOUT->at(i_plane).at(i_wire).at(tick) = wire.at(tick) - pedestal;
         }

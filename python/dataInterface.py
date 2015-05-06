@@ -5,14 +5,14 @@ import numpy as np
 import sys
 from ROOT import *
 
-
+LARIAT_TIME_TICKS = 1536
 
 class rawDaqInterface(object):
   """docstring for rawDataInterface"""
   def __init__(self):
     super(rawDaqInterface, self).__init__()
     # gSystem.Load("libEventViewer_RawViewer.so")
-    self._process = fmwk.DrawLariatDaq()
+    self._process = fmwk.DrawLariatDaq(LARIAT_TIME_TICKS)
     self._producer = ""
     self._nviews=larutil.Geometry.GetME().Nviews()
     self._c2p = fmwk.Converter()
@@ -190,7 +190,7 @@ class baseDataInterface(object):
     if geometry == "lariat":
       self._levels.append( (-15,15 ) )
       self._levels.append( (-10,30 ) )
-      self._tRange = 1536
+      self._tRange = LARIAT_TIME_TICKS
     else:
       self._levels.append( (-15,15 ) )
       self._levels.append( (-15,15 ) )
