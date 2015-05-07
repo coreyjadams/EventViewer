@@ -5,7 +5,7 @@ import numpy as np
 import sys
 from ROOT import *
 
-LARIAT_TIME_TICKS = 1536
+LARIAT_TIME_TICKS = 3072
 
 class rawDaqInterface(object):
   """docstring for rawDataInterface"""

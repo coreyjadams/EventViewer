@@ -13,7 +13,7 @@ namespace larlite {
     wiredataOUT = new std::vector<std::vector<std::vector<float> > > ;
     branches.resize(64);
     if (ticks == -1)
-      _n_time_ticks = 1536;
+      _n_time_ticks = 3072;
     else
       _n_time_ticks = ticks;
     c = new TChain("DataQuality/v1740");
