@@ -8,10 +8,14 @@
 
 namespace larlite {
 
-  DrawLariatDaq::DrawLariatDaq(){ 
+  DrawLariatDaq::DrawLariatDaq(int ticks){ 
     wiredata = new std::vector<std::vector<std::vector<unsigned short> > > ;
     wiredataOUT = new std::vector<std::vector<std::vector<float> > > ;
     branches.resize(64);
+    if (ticks == -1)
+      _n_time_ticks = 3072;
+    else
+      _n_time_ticks = ticks;
     c = new TChain("DataQuality/v1740");
     initialize();
   }
@@ -45,7 +49,7 @@ namespace larlite {
         wiredata->at(p).resize(geoService->Nwires(p));
         // Resize the wires to the right length
         for (auto & vec : wiredata->at(p)){
-          vec.resize(1536);
+          vec.resize(_n_time_ticks);
         }
     }
 
@@ -59,7 +63,7 @@ namespace larlite {
         wiredataOUT->at(p).resize(geoService->Nwires(p));
         // Resize the wires to the right length
         for (auto & vec : wiredataOUT->at(p)){
-          vec.resize(1536);
+          vec.resize(_n_time_ticks);
         }
     }
 
@@ -150,7 +154,7 @@ namespace larlite {
         for (auto & tick : wire){
           pedestal += tick;
         }
-        pedestal /= 1536;
+        pedestal /= _n_time_ticks;
         for (unsigned int tick = 0; tick < wire.size(); tick++){
           wiredataOUT->at(i_plane).at(i_wire).at(tick) = wire.at(tick) - pedestal;
         }
@@ -211,6 +215,7 @@ namespace larlite {
     // if the file isn't new, do nothing:
     if (s == inputFile) return;
     // check to see if this file exists.
+    std::cout << "Attempting to open file " << s << std::endl;
     std::ifstream ifile(s);
     if (!ifile.is_open()){
       std::cerr << "ERROR: Input file failed to open.\n";
@@ -223,6 +228,11 @@ namespace larlite {
       c -> Reset();
       c -> Add(inputFile.c_str());
       _n_events  = c -> GetEntries() / _n_cards;
+      if (_n_events == 0){
+        _run = 0;
+        _event_no = 0;
+        return;
+      }
       readData();
     }
   }
@@ -245,6 +255,11 @@ namespace larlite {
     }
     else{
       if (wiredataOUT !=0){
+        // std::cout << "Called get wire, printing a couple values...\n";
+        // std::cout << wiredataOUT->at(p).at(0)[0] << std::endl;
+        // std::cout << wiredataOUT->at(p).at(0)[1] << std::endl;
+        // std::cout << wiredataOUT->at(p).at(0)[2] << std::endl;
+        // std::cout << wiredataOUT->at(p).at(0)[3] << std::endl;
         return wiredataOUT->at(p);
       }
       else{
@@ -265,11 +280,7 @@ namespace larlite {
         return returnNull;
     }
     else{
-      // std::cout << "Called get wire, printing a couple values...\n";
-      // std::cout << wiredataOUT->at(plane).at(wire)[0] << std::endl;
-      // std::cout << wiredataOUT->at(plane).at(wire)[1] << std::endl;
-      // std::cout << wiredataOUT->at(plane).at(wire)[2] << std::endl;
-      // std::cout << wiredataOUT->at(plane).at(wire)[3] << std::endl;
+
       if (wiredataOUT !=0){
         return wiredataOUT->at(plane).at(wire);
       }

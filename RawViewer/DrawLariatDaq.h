@@ -28,7 +28,7 @@ namespace larlite {
   public:
 
     /// Default constructor
-    DrawLariatDaq();
+    DrawLariatDaq(int ticks = -1);
 
     /// Default destructor
     virtual ~DrawLariatDaq();
@@ -108,6 +108,8 @@ namespace larlite {
 
     const int _n_cards = 8;
     const int _n_channels = 64;
+
+    int _n_time_ticks;
 
     // Need some private worker functions to handle file i/o
     void readData();
