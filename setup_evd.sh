@@ -18,6 +18,6 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 # This section extends the path and python path to run from anywhere
 
 export PATH=$DIR/python:$PATH
-export PYTHONPATH=$DIR/python:$PYTHONPATH
+export PYTHONPATH=$DIR/python/:$PYTHONPATH
 
-alias lariatdaq.py="evd.py --daq -A"
+alias lariatdaq.py="evd.py --daq -L"

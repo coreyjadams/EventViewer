@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import sys
 import argparse
@@ -61,17 +61,139 @@ class ComboBoxWithKeyConnect(QtGui.QComboBox):
         else:
             super(ComboBoxWithKeyConnect,self).keyPressEvent(e)
 
+import threading
+class fileWatcher(threading.Thread):
+    """docstring for fileWatcher"""
+    def __init__(self, event,file):
+        super(fileWatcher, self).__init__()
+        self.stopped = event
+        # keep track of the last file displayed, only send a signal when it changes
+        self._prevFile=None
+        self._fileToWatch = file
+
+    def run(self):
+        while not self.stopped.wait(1.5):
+            # print "Thread called"
+            # open the file:
+            try:
+                f = open(self._fileToWatch)
+            except Exception, e:
+                print "The file selected for watching does not exist!"
+                raise e
+            # At this point, the file exists.
+            fileToDraw = f.readline()
+            # print "Contents of file are: ", fileToDraw
+            if fileToDraw == self._prevFile:
+                # print "Not drawing because file has not changed."
+                continue
+            if fileToDraw.endswith(".root"):
+                # print "Attempting to refresh picture"
+                self._func(fileToDraw)
+                self._prevFile = fileToDraw
+            else:
+                print "File has changed but does not appear to be a root file."
+
+
+    # This sets the function that gets called each iteration        
+    def connect(self, func):
+        self._func = func
+
 class evd(QtGui.QWidget):
 
 
     def __init__(self, geometry,mode,fileName=None):
         super(evd, self).__init__()
         # self._filePath = "/media/cadams/data_linux/argoneut_mc/nue_larlite_all.root"
-        self._filePath = fileName
+        self._filePath = None
+        # initUI should not do ANY data handling, it should only get the interface loaded
         self._mode = mode
         self._geometry = geometry
         self._baseData = baseDataInterface(geometry,mode)
         self.initUI()
+
+        self._watcher = None
+        self._stopFlag = None
+        self.updateFile(fileName)
+
+
+    def closeEvent(self,event):
+        if self._running:
+            self.stopRun()
+
+    def parseFileName(self,fileName):
+        if self._running:
+            self.stopRuns()
+        if type(fileName) != str:
+            self._filePath = None
+            return
+
+        if fileName.endswith(".root"):
+            # this is a data file, set it to display:
+            self._filePath = fileName
+            self.initData()
+            self.updateDataChoices()
+            self.goToEvent(0)
+
+        elif fileName.endswith(".txt"):
+            # parse the txt file to get the file name
+            # automatically start a run of autoupdates
+            self._monitorFile = fileName
+            self.startRun(fileName)
+        else:
+            self._filePath = None
+
+    def startRun(self,fileName=None):
+        # this function can be triggered by a button push, which implies it was stopped before;
+        # In that case, refresh the thread and start over.
+        # It can also be called by the parsefileName function, which implies a file is ready
+        if self._watcher == None and fileName == None:
+            print "ERROR: there is no file to watch, can not start a run."
+            return
+        self._stopFlag = threading.Event()
+        self._watcher = fileWatcher(self._stopFlag, self._monitorFile)
+        self._watcher.connect(self.autoUpdateFile)        
+        self._runControlButton.setText("Stop Run")
+        self._running = True
+        self._watcher.start()
+        pass
+
+    def stopRun(self):
+        self._runControlButton.setText("Start Run")
+        self._running = False
+        self._stopFlag.set()
+        pass
+
+    def runControl(self):
+        if not self._running:
+            self.startRun()
+            return
+        else:
+            self.stopRun()
+
+    def updateFile(self, file):
+        if self._running:
+            self.stopRun()
+        self.parseFileName(file)
+        self._filePath = file
+
+    # this function is ONLY meant to be called by a thread for auto updating.
+    # Do not call this yourself, use updateFile instead
+    def autoUpdateFile(self,file):
+        # Checking that the file is a .root file is left to the thread
+        # print "Called function to update image ", file
+        self._filePath = file
+        self.initData()
+        self.updateDataChoices()
+        self.goToEvent(0)
+        for view in range(0,self._baseData._nviews):
+            self._drawerList[view].setVisible(False)
+            self._drawerList[view].setVisible(True)
+
+
+    def quit(self):
+        if self._running:
+            self.stopRun()
+        QtCore.QCoreApplication.instance().quit()
 
     def initUI(self):
 
@@ -81,7 +203,7 @@ class evd(QtGui.QWidget):
         self._prevButton = QtGui.QPushButton("Previous")
         self._quitButton = QtGui.QPushButton("Quit")
         # Bind quit to the proper functionality
-        self._quitButton.clicked.connect(QtCore.QCoreApplication.instance().quit)
+        self._quitButton.clicked.connect(self.quit)
         self._nextButton.clicked.connect(self.nextEvent)
         self._prevButton.clicked.connect(self.prevEvent)
 
@@ -91,6 +213,14 @@ class evd(QtGui.QWidget):
 
         self._fileSelectButton = QtGui.QPushButton("Select File")
         self._fileSelectButton.clicked.connect(self.selectFile)
+
+        self._screenCaptureButton = QtGui.QPushButton("Capture Screen")
+        self._screenCaptureButton.clicked.connect(self.screenCapture)
+
+        self._runControlButton = QtGui.QPushButton("Start Run")
+        self._runControlButton.clicked.connect(self.runControl)
+        self._runControlButton.setStyleSheet("background-color: red")
+        self._running = False
 
         # Labels and text entry to display the event number
 
@@ -129,7 +259,6 @@ class evd(QtGui.QWidget):
                                                 'mode': 'rgb'}
         self._blankMapCollection = {'ticks': [(0, (255, 255, 255, 255)), (1, (255, 255, 255, 255))], 'mode': 'rgb'}
         self._cmap.restoreState(self._colorMapCollection)
-        self._cmap.sigGradientChanged.connect(self.refreshGradient)
         # print self._cmap.size()
 
 
@@ -153,9 +282,12 @@ class evd(QtGui.QWidget):
         self._eventControlBox.addWidget(self._nextButton)
         self._eventControlBox.addWidget(self._prevButton)
         self._eventControlBox.addWidget(self._fileSelectButton)
+        if self._mode == "daq":
+            self._eventControlBox.addWidget(self._runControlButton)
         # self._eventControlBox.addWidget(self._colorButton)
         # if self._mode == "daq":
             # self._eventControlBox.addWidget(self._cmap)
+            # self._cmap.sigGradientChanged.connect(self.refreshGradient)
         
         # Add labels for the hits and clusters:
         # Set up the labels that hold the data:
@@ -198,6 +330,8 @@ class evd(QtGui.QWidget):
             self._drawerList[-1]._tRange = self._baseData._tRange
             self._drawerList[-1].connectStatusBar(self.statusBar)
             self._drawerList[-1]._plane = i
+            self._drawerList[-1]._item.setLookupTable(self._cmap.getLookupTable(255))
+
 
         # Make an extra space for wires:
         self._drawerList.append(pg.GraphicsLayoutWidget())
@@ -220,6 +354,7 @@ class evd(QtGui.QWidget):
         # grid.addLayout(self._eventControlBox,2,0,nviews+1,1)
         grid.addLayout(self._dataBox,0,1,2,2)
         grid.addWidget(self.statusBar,2,0,1,2)
+        grid.addWidget(self._screenCaptureButton,2,2,1,1)
         self.setLayout(grid)    
 
         
@@ -227,16 +362,6 @@ class evd(QtGui.QWidget):
         self.setWindowTitle('Event Display')    
         self.show()
 
-
-        # If there was a file passed on commandline, try to use it:
-        if (self._filePath != None):
-            self.initData()
-            self.updateDataChoices()
-            self.goToEvent(0)
-
-        self.setRangeToMax()
-
-        self.updateImage()
 
     def initDataChoices(self):
         # Create a tuple of options and their labels
@@ -332,7 +457,7 @@ class evd(QtGui.QWidget):
         # print self._baseData._fileInterface.getListOfKeys()
         # check for raw data, make a handle for it if available:
         if self._mode == "daq":
-            # se.f._baseData._dataHandle
+            # self._baseData._dataHandle
             pass
         else:
             if 'wire' in self._baseData._dataHandle._fileInterface.getListOfKeys():
@@ -354,7 +479,6 @@ class evd(QtGui.QWidget):
         #    to the interface and draw those things!
 
 
-    # What follows are functions to manage the next, prev events etc.
 
     def drawRaw(self):
       if self._mode != "daq":
@@ -372,10 +496,11 @@ class evd(QtGui.QWidget):
           d = self._baseData._dataHandle.get_img()
           self._cmap.restoreState(self._colorMapCollection)
           for i in range (0, self._baseData._nviews):
-            # print self._baseData._levels[i]
+
             self._drawerList[i]._item.setImage(d[i], 
                                                 scale=self._baseData._aspectRatio,
                                                 levels=self._baseData._levels[i])
+            self._drawerList[i]._item.updateImage()
             self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
           self.drawWire(1,1)
 
@@ -449,6 +574,9 @@ class evd(QtGui.QWidget):
 
         if not drawn:
           self.drawBlank()
+
+
+
 
     def clearDrawnProducts(self):
         for view in range(0,self._baseData._nviews):
@@ -555,10 +683,9 @@ class evd(QtGui.QWidget):
             self.update()
 
     def selectFile(self):
-        self._filePath = str(QtGui.QFileDialog.getOpenFileName())
-        self.initData()
-        self.updateDataChoices()
-        self.updateImage()
+        filePath = str(QtGui.QFileDialog.getOpenFileName())
+        self.updateFile(filePath)
+
 
     def keyPressEvent(self,e):
         # print "A key was pressed!"
@@ -579,6 +706,21 @@ class evd(QtGui.QWidget):
     def keyPressInterrupt(self,e):
         print "Interrupting function!"
 
+
+    def screenCapture(self):
+        print "Screen Capture!"
+        dialog = QtGui.QFileDialog()
+        r,e = self._baseData._dataHandle.getRunAndEvent()
+        name = "evd_" + self._geometry + "_R" + str(r)
+        name = name + "_E" + str(e) + ".png"
+        f = dialog.getSaveFileName(self,"Save File",name,
+            "PNG (*.png);;JPG (*.jpg);;All Files (*)")
+
+        print f
+        # print filt
+        # Print
+        pixmapImage = QtGui.QPixmap.grabWidget(self)
+        pixmapImage.save(f,"PNG")
 
 def main():
     
@@ -604,7 +746,8 @@ def main():
     
     ex = evd(geometry,mode,args.file)
 
-    sys.exit(app.exec_())
+    app.exec_()
+    # sys.exit(app.exec_())
 
 
 if __name__ == '__main__':

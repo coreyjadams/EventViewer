@@ -5,14 +5,14 @@ import numpy as np
 import sys
 from ROOT import *
 
-
+LARIAT_TIME_TICKS = 3072
 
 class rawDaqInterface(object):
   """docstring for rawDataInterface"""
   def __init__(self):
     super(rawDaqInterface, self).__init__()
     # gSystem.Load("libEventViewer_RawViewer.so")
-    self._process = fmwk.DrawLariatDaq()
+    self._process = fmwk.DrawLariatDaq(LARIAT_TIME_TICKS)
     self._producer = ""
     self._nviews=larutil.Geometry.GetME().Nviews()
     self._c2p = fmwk.Converter()
@@ -25,6 +25,7 @@ class rawDaqInterface(object):
     d = []
     for i in range(0,self._nviews):
       d.append(np.array(self._c2p.Convert(self._process.getDataByPlane(i))) )
+      # print "got a plane, here is a sample: ", d[i][0][0]
     return d
 
   def get_wire(self, plane, wire):
@@ -48,11 +49,11 @@ class rawDaqInterface(object):
       self._lastProcessed = self._event
 
   def next(self):
-    print "Called next"
+    # print "Called next"
     self._process.nextEvent()
 
   def prev(self):
-    print "Called prev"
+    # print "Called prev"
     self._process.prevEvent()
 
   def getRunAndEvent(self):
@@ -189,6 +190,7 @@ class baseDataInterface(object):
     if geometry == "lariat":
       self._levels.append( (-15,15 ) )
       self._levels.append( (-10,30 ) )
+      self._tRange = LARIAT_TIME_TICKS
     else:
       self._levels.append( (-15,15 ) )
       self._levels.append( (-15,15 ) )
@@ -204,12 +206,16 @@ class baseDataInterface(object):
     # Get the ranges:
     self._wRange = []
     for v in range(0, self._nviews):
-     self._wRange.append(larutil.Geometry.GetME().Nwires(0))
+      self._wRange.append(larutil.Geometry.GetME().Nwires(0))
     self._tRange = larutil.DetectorProperties.GetME().ReadOutWindowSize()
 
     # self.xmin
   
   def config_argo(self):
+    larutil.LArUtilManager.Reconfigure(fmwk.geo.kArgoNeuT)
+    self.init_geom()
+
+  def config_lariat(self):
     larutil.LArUtilManager.Reconfigure(fmwk.geo.kArgoNeuT)
     self.init_geom()
 
