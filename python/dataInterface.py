@@ -338,18 +338,19 @@ class larliteInterface(object):
     # Define the larlite types to get:
     types = dict()
     # types.update({'vertex': fmwk.event_vertex})
-    types.update({'hit': fmwk.event_hit})
-    types.update({'cluster': fmwk.event_cluster})
+    types.update({'hit': fmwk.data.kHit})
+    types.update({'cluster': fmwk.data.kCluster})
 
 
     # Get an event vector out of this file, and use it to
     # get the run and event info
     # Any old data product will do, but don't use wires
     keys = self._fileInterface.getListOfKeys()
+    # print keys
     for key in keys:
       # print key
       # print keys[key][0]
       if key in types:
-        d = self._mgr.get_data(types[key])(keys[key][0])
+        d = self._mgr.get_data(types[key], keys[key][0])
         return d.run(), d.event_id()
     # d = mgr.get_data(fmwk.event_hit)("cccluster")

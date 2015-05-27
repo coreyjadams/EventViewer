@@ -101,24 +101,6 @@ namespace larlite {
       return false;
     }
 
-    auto associated_hit_producers = ev_clus->association_keys(data::kHit);
-    
-    if(!(associated_hit_producers.size()))
-      return false;
-
-    // for (auto & key : associated_hit_producers){
-    //   std::cout << "Found this associated_hit_producer: " << key << std::endl;
-    // }
-
-    auto ev_hit  = storage->get_data<event_hit>(associated_hit_producers[0]);
-
-    if(!ev_hit){
-      std::cout << "Did not find hit data product by "
-                << associated_hit_producers[0].c_str()
-                << "!" << std::endl;
-      return false;
-    }
-
     
     for (unsigned int p = 0; p < geoService -> Nviews(); p ++){
 
@@ -127,23 +109,36 @@ namespace larlite {
       hitEndByPlaneByCluster   ->at(p).reserve(ev_clus->size());
     }
 
+    ::larlite::event_hit* ev_hit = nullptr;
+    auto const& hit_index_v = storage->find_one_ass(ev_clus->id(),ev_hit,producer);
+
+
+    if(!ev_hit){
+      std::cout << "Did not find hit data product"
+                << "!" << std::endl;
+      return false;
+    }
+
+
+    if (!hit_index_v.size())
+      return false;
 
     // Loop over the clusters and fill the necessary vectors.  
     // I don't know how clusters are stored so I'm taking a conservative
     // approach to packaging them for drawing
     std::vector<int> cluster_index;
     cluster_index.resize(geoService -> Nviews());
-    auto ass_info = ev_clus->association(ev_hit->id());
-    int view = ev_hit->at(ass_info.front()[0]).View();
+
+    int view = ev_hit->at(hit_index_v.front()[0]).View();
     std::vector<int>  nullIntVec;
     std::vector<float>  nullFltVec;
-    for(auto const& hit_indices : ass_info) {
+    for(auto const& hit_indices : hit_index_v) {
       view = ev_hit->at(hit_indices[0]).View();
       for(auto const& hit_index : hit_indices){
         // if (view == 0){
         //   std::cout << "Got a hit, seems to be view " << view
         //             << " and cluster " << cluster_index[view] 
-        //             << " at " << ev_hit->at(hit_index).Wire()
+        //             << " at " << ev_hit->at(hit_index).WireID().Wire
         //             << ", " << ev_hit->at(hit_index).PeakTime()
         //             << std::endl;
         // }
@@ -153,26 +148,26 @@ namespace larlite {
         }
         wireByPlaneByCluster 
           -> at(view).at(cluster_index[view]).push_back(
-            ev_hit->at(hit_index).Wire());
+            ev_hit->at(hit_index).WireID().Wire);
         
         if ((int)hitStartByPlaneByCluster -> at(view).size() != cluster_index[view]-1){
           hitStartByPlaneByCluster -> at(view).push_back(nullFltVec);
         }
         hitStartByPlaneByCluster 
-          -> at(view).at(cluster_index[view]).push_back(ev_hit->at(hit_index).StartTime());
+          -> at(view).at(cluster_index[view]).push_back(ev_hit->at(hit_index).StartTick());
         
         if ((int)hitEndByPlaneByCluster -> at(view).size() != cluster_index[view]-1){
           hitEndByPlaneByCluster -> at(view).push_back(nullFltVec);
         }
         hitEndByPlaneByCluster 
           -> at(view).at(cluster_index[view]).push_back(
-            ev_hit->at(hit_index).EndTime());
+            ev_hit->at(hit_index).EndTick());
 
         // Determine if this hit should change the view range:
-        if (ev_hit->at(hit_index).Wire() > wireRange.at(view).at(1))
-          wireRange.at(view).at(1) = ev_hit->at(hit_index).Wire();
-        if (ev_hit->at(hit_index).Wire() < wireRange.at(view).at(0))
-          wireRange.at(view).at(0) = ev_hit->at(hit_index).Wire();
+        if (ev_hit->at(hit_index).WireID().Wire > wireRange.at(view).at(1))
+          wireRange.at(view).at(1) = ev_hit->at(hit_index).WireID().Wire;
+        if (ev_hit->at(hit_index).WireID().Wire < wireRange.at(view).at(0))
+          wireRange.at(view).at(0) = ev_hit->at(hit_index).WireID().Wire;
         if (ev_hit->at(hit_index).PeakTime() > timeRange.at(view).at(1))
           timeRange.at(view).at(1) = ev_hit->at(hit_index).PeakTime();
         if (ev_hit->at(hit_index).PeakTime() < timeRange.at(view).at(0))
