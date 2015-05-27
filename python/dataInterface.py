@@ -5,7 +5,7 @@ import numpy as np
 import sys
 from ROOT import *
 
-LARIAT_TIME_TICKS = 3072
+LARIAT_TIME_TICKS = 3072/2
 
 class rawDaqInterface(object):
   """docstring for rawDataInterface"""
@@ -116,6 +116,31 @@ class hitInterface(object):
   def initialize(self):
     self._process.initialize()
 
+
+class vertexInterface(object):
+
+  def __init__(self):
+    super(vertexInterface, self).__init__()
+    # print "In the init function for the hit interface"
+    gSystem.Load("libLArLite_LArUtil")
+    self._process = fmwk.DrawVertex()
+    self._producer = ""
+    self._nviews=larutil.Geometry.GetME().Nviews()
+    self._c2p = fmwk.Converter()
+
+  def get_vertices(self,view):
+    v = []
+    v.append(np.array(self._c2p.Convert(self._process.getWireByPlane(view))))
+    v.append(np.array(self._c2p.Convert(self._process.getTimeByPlane(view))))
+    return v
+
+  def setProducer(self, prod):
+    self._producer = str(prod)
+    self._process.setProducer(self._producer)
+
+  def initialize(self):
+    self._process.initialize()
+
 class clusterInterface(object):
 
   def __init__(self):
@@ -188,8 +213,10 @@ class baseDataInterface(object):
       self._levels.append( (-15,15 ) )
       self._levels.append( (-10,30 ) )
     if geometry == "lariat":
+      # self._levels.append( (-150,150 ) )
       self._levels.append( (-15,15 ) )
-      self._levels.append( (-10,30 ) )
+      # self._levels.append( (-0,150 ) )
+      self._levels.append( (-2,20 ) )
       self._tRange = LARIAT_TIME_TICKS
     else:
       self._levels.append( (-15,15 ) )
@@ -261,6 +288,11 @@ class larliteInterface(object):
           self._daughterProcesses[dataProduct].initialize()
         if dataProduct == 'cluster':
           self._daughterProcesses.update({dataProduct : clusterInterface()} )
+          self._my_proc.add_process(self._daughterProcesses[dataProduct]._process)
+          self._daughterProcesses[dataProduct].setProducer(producer)
+          self._daughterProcesses[dataProduct].initialize()
+        if dataProduct == 'vertex':
+          self._daughterProcesses.update({dataProduct : vertexInterface()} )
           self._my_proc.add_process(self._daughterProcesses[dataProduct]._process)
           self._daughterProcesses[dataProduct].setProducer(producer)
           self._daughterProcesses[dataProduct].initialize()

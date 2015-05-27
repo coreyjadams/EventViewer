@@ -2,6 +2,7 @@
 
 import sys
 import argparse
+import collections
 from PyQt4 import QtGui, QtCore
 import pyqtgraph as pg
 from dataInterface import *
@@ -130,6 +131,7 @@ class evd(QtGui.QWidget):
         if fileName.endswith(".root"):
             # this is a data file, set it to display:
             self._filePath = fileName
+            self.setRangeToMax()
             self.initData()
             self.updateDataChoices()
             self.goToEvent(0)
@@ -295,6 +297,7 @@ class evd(QtGui.QWidget):
             self.initDataChoices()
             for key in self._dataListsAndLabels:
                 self._eventControlBox.addWidget(self._dataListsAndLabels[key])
+                print "Adding ", key
 
             self._eventControlBox.addWidget(self._drawRawOption)
 
@@ -366,22 +369,27 @@ class evd(QtGui.QWidget):
     def initDataChoices(self):
         # Create a tuple of options and their labels
         # Add the raw, clusters, and hits:
-        self._dataListsAndLabels = {
-                'Hits': ComboBoxWithKeyConnect(), 
-                'HitsLabel': QtGui.QLabel("Hits:") }
+        self._dataListsAndLabels = collections.OrderedDict()
+
+        self._dataListsAndLabels.update({'HitsLabel': QtGui.QLabel("Hits:")})
+        self._dataListsAndLabels.update({'Hits': ComboBoxWithKeyConnect()})
         self._dataListsAndLabels['Hits'].connectOwnerKPE(self.keyPressEvent)
 
-        self._dataListsAndLabels.update({
-                'Clusters': ComboBoxWithKeyConnect(), 
-                'ClustersLabel': QtGui.QLabel("Clusters:") })
+        self._dataListsAndLabels.update({'ClustersLabel': QtGui.QLabel("Clusters:")})
+        self._dataListsAndLabels.update({'Clusters': ComboBoxWithKeyConnect()})
         self._dataListsAndLabels['Clusters'].connectOwnerKPE(self.keyPressEvent)
 
+        self._dataListsAndLabels.update({'VertexLabel': QtGui.QLabel("Vertex:")})
+        self._dataListsAndLabels.update({'Vertex': ComboBoxWithKeyConnect()})
+        self._dataListsAndLabels['Vertex'].connectOwnerKPE(self.keyPressEvent)
 
         self._dataListsAndLabels['Hits'].addItem("--None--")
         self._dataListsAndLabels['Clusters'].addItem("--None--")
+        self._dataListsAndLabels['Vertex'].addItem("--None--")
         # self._dataListsAndLabels['Hits'].addItem("item 3")
         self._dataListsAndLabels['Hits'].activated[str].connect(self.hitsChoiceChanged)
         self._dataListsAndLabels['Clusters'].activated[str].connect(self.clusterChoiceChanged)
+        self._dataListsAndLabels['Vertex'].activated[str].connect(self.vertexChoiceChanged)
 
     def updateDataChoices(self):
         if self._mode == "daq":
@@ -402,8 +410,13 @@ class evd(QtGui.QWidget):
                     for item in self._baseData._dataHandle._fileInterface.getListOfKeys()['cluster']:
                         self._dataListsAndLabels['Clusters'].addItem(item)
 
-    def hitsChoiceChanged(self, text):
-        # This is the only method monitoring the status of hit drawing
+                if key == 'vertex':
+                    self._dataListsAndLabels['Vertex'].clear()
+                    self._dataListsAndLabels['Vertex'].addItem("--Select--")
+                    for item in self._baseData._dataHandle._fileInterface.getListOfKeys()['vertex']:
+                        self._dataListsAndLabels['Vertex'].addItem(item)
+
+    def hitsChoiceChanged(self, text):        # This is the only method monitoring the status of hit drawing
         # So it is responsible for cleaning up the hits if the 
         # choice changes
         # if text == '--None--' or text == '--Select--':
@@ -420,20 +433,37 @@ class evd(QtGui.QWidget):
         self.updateImage()
 
     def clusterChoiceChanged(self,text):
-        # This is the only method monitoring the status of hit drawing
-        # So it is responsible for cleaning up the hits if the 
+        # This is the only method monitoring the status of cluster drawing
+        # So it is responsible for cleaning up the clusters if the 
         # choice changes
         # if text == '--None--' or text == '--Select--':
         for view in range(0,self._baseData._nviews):
             self._drawerList[view].clearClusters()
                 
-        # print "Hits choice changed to ", text
+        # print "Cluster choice changed to ", text
         if 'cluster' in self._baseData._dataHandle._fileInterface.getListOfKeys():
             if text in self._baseData._dataHandle._fileInterface.getListOfKeys()['cluster']:
                 # print "Trying to add the clusters process ..."
                 self._baseData._dataHandle.add_drawing_process('cluster',text)
             else:
                 self._baseData._dataHandle.remove_drawing_process('cluster')
+        self.updateImage()
+
+    def vertexChoiceChanged(self,text):
+        # This is the only method monitoring the status of vertex drawing
+        # So it is responsible for cleaning up the clusters if the 
+        # choice changes
+        # if text == '--None--' or text == '--Select--':
+        for view in range(0,self._baseData._nviews):
+            self._drawerList[view].clearVertices()
+                
+        # print "vertex choice changed to ", text
+        if 'vertex' in self._baseData._dataHandle._fileInterface.getListOfKeys():
+            if text in self._baseData._dataHandle._fileInterface.getListOfKeys()['vertex']:
+                # print "Trying to add the clusters process ..."
+                self._baseData._dataHandle.add_drawing_process('vertex',text)
+            else:
+                self._baseData._dataHandle.remove_drawing_process('vertex')
         self.updateImage()
 
     def rawChoiceChanged(self):
@@ -488,6 +518,7 @@ class evd(QtGui.QWidget):
           d = self._baseData._dataHandle._daughterProcesses['wire'].get_img()
           self._cmap.restoreState(self._colorMapCollection)
           for i in range (0, self._baseData._nviews):
+            # print len(d[i])
             self._drawerList[i]._item.setImage(d[i], scale=self._baseData._aspectRatio)
             self._drawerList[i]._item.setLookupTable(self._cmap.getLookupTable(255))
           self.drawWire(1,1)
@@ -546,6 +577,16 @@ class evd(QtGui.QWidget):
             clusters = procs['cluster'].get_clusters(view)
             self._drawerList[view].drawClusters(clusters)
 
+    def drawVertices(self):
+        procs = self._baseData._dataHandle._daughterProcesses
+        if 'vertex' not in procs:
+            # This means clusters aren't being drawn, bail
+            return
+        # print procs.keys()
+        for view in range(0,self._baseData._nviews):
+            vertices = procs['vertex'].get_vertices(view)
+            # print vertices
+            self._drawerList[view].drawVertices(vertices)
 
 
     def updateImage(self):
@@ -571,6 +612,10 @@ class evd(QtGui.QWidget):
               if self._dataListsAndLabels['Clusters'].currentText() != '--None--':
                 self.drawClusters()
                 drawn = True
+            if self._dataListsAndLabels['Vertex'].currentText() != '--Select--':
+              if self._dataListsAndLabels['Vertex'].currentText() != '--None--':
+                self.drawVertices()
+                drawn = True
 
         if not drawn:
           self.drawBlank()
@@ -582,6 +627,7 @@ class evd(QtGui.QWidget):
         for view in range(0,self._baseData._nviews):
             self._drawerList[view].clearHits()
             self._drawerList[view].clearClusters()
+            self._drawerList[view].clearVertices()
 
     def nextEvent(self):
       # if self._mode == "daq":
@@ -741,6 +787,7 @@ def main():
         geometry = "lariat"
     if args.daq:
         mode = "daq"
+        print "Running in daq mode"
     else:
       mode = ""
     

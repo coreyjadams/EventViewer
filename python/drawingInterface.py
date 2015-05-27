@@ -49,6 +49,25 @@ class hitDrawer(QtGui.QGraphicsRectItem):
     def connectToggleHighlight(self, ownerTH):
         self._toggleHighlight = ownerTH
 
+class vertexDrawer(object):
+
+    def __init__(self, **kwargs):
+        super(vertexDrawer,self).__init__()
+        self._listOfHits = []
+        self._view = kwargs['view']
+        self._pos  = kwargs['pos']
+        self._isHighlighted = False 
+
+    def draw(self):
+        self._vert = QtGui.QGraphicsEllipseItem(self._pos[0],self._pos[1],2,30)
+        self._vert.setPen(pg.mkPen(None))
+        self._vert.setBrush(pg.mkColor((0,0,0)))
+        self._view.addItem(self._vert)
+
+    def clear(self):
+        self._view.removeItem(self._vert)
+        
+
 class clusterDrawer(object):
 
     def __init__(self, **kwargs):
@@ -121,6 +140,7 @@ class evd_drawer(pg.GraphicsLayoutWidget):
         self._plane = -1
         self._listOfHits = []
         self._listOfClusters = []
+        self._listOfVertices = []
         self._cmSpace = False
         self._wire2cm = 0.4
         self._time2cm = 0.2
@@ -193,6 +213,11 @@ class evd_drawer(pg.GraphicsLayoutWidget):
             clust.clearHits()
         self._listOfClusters = []        
 
+    def clearVertices(self):
+        for vertex in self._listOfVertices:
+            vertex.clear();
+        self._listOfVertices = []
+
     def connectWireDrawFunction(self, func):
         self._wdf = func
 
@@ -217,3 +242,10 @@ class evd_drawer(pg.GraphicsLayoutWidget):
             colorIndex += 1
             if colorIndex >= len(_clusterColors):
                 colorIndex = 0
+
+    def drawVertices(self,vertices):
+        for vertex in range(0,len(vertices[0])):
+            pos = (vertices[0][vertex], vertices[1][vertex])
+            self._listOfVertices.append(vertexDrawer(view=self._view, pos = pos))
+            self._listOfVertices[-1].draw()
+            
