@@ -154,14 +154,13 @@ namespace larlite {
           hitStartByPlaneByCluster -> at(view).push_back(nullFltVec);
         }
         hitStartByPlaneByCluster 
-          -> at(view).at(cluster_index[view]).push_back(ev_hit->at(hit_index).StartTick());
+          -> at(view).at(cluster_index[view]).push_back(ev_hit->at(hit_index).PeakTime() - ev_hit->at(hit_index).RMS());
         
         if ((int)hitEndByPlaneByCluster -> at(view).size() != cluster_index[view]-1){
           hitEndByPlaneByCluster -> at(view).push_back(nullFltVec);
         }
         hitEndByPlaneByCluster 
-          -> at(view).at(cluster_index[view]).push_back(
-            ev_hit->at(hit_index).EndTick());
+          -> at(view).at(cluster_index[view]).push_back(ev_hit->at(hit_index).PeakTime() + ev_hit->at(hit_index).RMS());
 
         // Determine if this hit should change the view range:
         if (ev_hit->at(hit_index).WireID().Wire > wireRange.at(view).at(1))

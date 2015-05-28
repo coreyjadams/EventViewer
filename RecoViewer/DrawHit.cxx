@@ -92,8 +92,8 @@ namespace larlite {
     for (auto & hit: *hitHandle){
         unsigned int view = hit.View();
         wireByPlane -> at(view).push_back(hit.WireID().Wire);
-        hitStartByPlane -> at(view).push_back(hit.StartTick());
-        hitEndByPlane -> at(view).push_back(hit.EndTick());
+        hitStartByPlane -> at(view).push_back(hit.PeakTime() - hit.RMS());
+        hitEndByPlane -> at(view).push_back(hit.PeakTime() + hit.RMS());
     }
 
 
