@@ -1,22 +1,23 @@
-#ifndef LARLITE_DRAWVERTEX_CXX
-#define LARLITE_DRAWVERTEX_CXX
+#ifndef LARLITE_DRAWENDPOINT2D_CXX
+#define LARLITE_DRAWENDPOINT2D_CXX
 
-#include "DrawVertex.h"
-#include "DataFormat/vertex.h"
+#include "DrawEndpoint2d.h"
+#include "DataFormat/endpoint2d.h"
+// #include "DataFormat/cluster.h"
 #include "LArUtil/DetectorProperties.h"
 #include "LArUtil/GeometryUtilities.h"
 
 namespace larlite {
 
-  DrawVertex::DrawVertex(){
-    _name="DrawVertex";
+  DrawEndpoint2d::DrawEndpoint2d(){
+    _name="DrawEndpoint2d";
     _fout=0;
 
     wireByPlane = new std::vector<std::vector<int>>;
     timeByPlane = new std::vector<std::vector<float>>;
   }
 
-  bool DrawVertex::initialize() {
+  bool DrawEndpoint2d::initialize() {
 
     //
     // This function is called in the beginning of event loop
@@ -41,7 +42,7 @@ namespace larlite {
     return true;
   }
   
-  bool DrawVertex::analyze(storage_manager* storage) {
+  bool DrawEndpoint2d::analyze(storage_manager* storage) {
   
     //
     // Do your event-by-event analysis here. This function is called for 
@@ -65,7 +66,7 @@ namespace larlite {
     //
    
     auto detProp = larutil::DetectorProperties::GetME();
-    auto geoUtil = larutil::GeometryUtilities::GetME();
+    // auto geoUtil = larutil::GeometryUtilities::GetME();
 
     // Clear out the hit data but reserve some space for the hits
     for (unsigned int p = 0; p < geoService -> Nviews(); p ++){
@@ -84,57 +85,49 @@ namespace larlite {
     
     }
 
-    auto ev_vert = storage->get_data<event_vertex>(producer);
-    if(!ev_vert)
+    auto ev_end2d = storage->get_data<event_endpoint2d>(producer);
+    if(!ev_end2d)
       return false;
-    if(!ev_vert->size()) {
+    if(!ev_end2d->size()) {
       print(msg::kWARNING,__FUNCTION__,
-      Form("Skipping event %d since no vertex found...",ev_vert->event_id()));
+      Form("Skipping event %d since no endpoint2d found...",ev_end2d->event_id()));
       return false;
     }
     
     for (unsigned int p = 0; p < geoService -> Nviews(); p ++){
-      wireByPlane  -> at(p).reserve(ev_vert->size());
-      timeByPlane  -> at(p).reserve(ev_vert->size());
+      wireByPlane  -> at(p).reserve(ev_end2d->size());
+      timeByPlane  -> at(p).reserve(ev_end2d->size());
     }
 
 
     // Loop over the vertices and fill the necessary vectors.  
 
-    larutil::PxPoint point;
-    double * xyz = new double[3];
+    // larutil::PxPoint point;
+    // double * xyz = new double[3];
 
-    for (auto & vertex : * ev_vert){
-      // A vertex is a 3D object.  So take it and project it into each plane:
-      for (unsigned int p = 0; p < geoService -> Nviews(); p ++){
-
-        vertex.XYZ(xyz);
-        try {
-          point = geoUtil -> Get2DPointProjection(xyz,p);
-        }
-        catch(const std::exception& e) {
-          std::cerr << e.what() << '\n';
-        }
-        wireByPlane -> at(p).push_back(point.w);
-        timeByPlane -> at(p).push_back(point.t);
+    for (auto & endpoint2d : * ev_end2d){
+      // for (unsigned int p = 0; p < geoService -> Nviews(); p ++){
+        int p = endpoint2d.View();
+        wireByPlane -> at(p).push_back(endpoint2d.Wire());
+        timeByPlane -> at(p).push_back(endpoint2d.DriftTime());
 
         // Determine if this hit should change the view range:
-        if (point.w > wireRange.at(p).at(1))
-          wireRange.at(p).at(1) = point.w;
-        if (point.w < wireRange.at(p).at(0))
-          wireRange.at(p).at(0) = point.w;
-        if (point.t > timeRange.at(p).at(1))
-          timeRange.at(p).at(1) = point.t;
-        if (point.t < timeRange.at(p).at(0))
-          timeRange.at(p).at(0) = point.t;
-      }
+        if (endpoint2d.Wire() > wireRange.at(p).at(1))
+          wireRange.at(p).at(1) = endpoint2d.Wire();
+        if (endpoint2d.Wire() < wireRange.at(p).at(0))
+          wireRange.at(p).at(0) = endpoint2d.Wire();
+        if (endpoint2d.DriftTime() > timeRange.at(p).at(1))
+          timeRange.at(p).at(1) = endpoint2d.DriftTime();
+        if (endpoint2d.DriftTime() < timeRange.at(p).at(0))
+          timeRange.at(p).at(0) = endpoint2d.DriftTime();
+      // }
     }
     
 
     return true;
   }
 
-  bool DrawVertex::finalize() {
+  bool DrawEndpoint2d::finalize() {
 
     // This function is called at the end of event loop.
     // Do all variable finalization you wish to do here.
@@ -154,13 +147,13 @@ namespace larlite {
     return true;
   }
 
-  DrawVertex::~DrawVertex(){
+  DrawEndpoint2d::~DrawEndpoint2d(){
     delete wireByPlane;
     delete timeByPlane;
   }
 
 
-  const std::vector<int> & DrawVertex::getWireByPlane(unsigned int p) const{
+  const std::vector<int> & DrawEndpoint2d::getWireByPlane(unsigned int p) const{
     static std::vector<int> returnNull;
     if (p >= geoService->Nviews() ){
       std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
@@ -176,7 +169,7 @@ namespace larlite {
     }
   }
 
-  const std::vector<float> & DrawVertex::getTimeByPlane(unsigned int p) const{
+  const std::vector<float> & DrawEndpoint2d::getTimeByPlane(unsigned int p) const{
     static std::vector<float> returnNull;
     if (p >= geoService->Nviews() ){
       std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
@@ -193,7 +186,7 @@ namespace larlite {
   }
 
 
-  std::vector<float> DrawVertex::GetWireRange(unsigned int p){
+  std::vector<float> DrawEndpoint2d::GetWireRange(unsigned int p){
     static std::vector<float> returnNull;
     if (p >= geoService->Nviews() ){
       std::cerr << "ERROR: Request for nonexistent plane " << p << std::endl;
@@ -202,7 +195,7 @@ namespace larlite {
     else 
       return wireRange.at(p);
   }
-  std::vector<float> DrawVertex::GetTimeRange(unsigned int p){
+  std::vector<float> DrawEndpoint2d::GetTimeRange(unsigned int p){
     static std::vector<float> returnNull;
     if (p >= geoService->Nviews() ){
       std::cerr << "ERROR: Request for nonexistent plane " << p << std::endl;

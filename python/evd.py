@@ -297,7 +297,6 @@ class evd(QtGui.QWidget):
             self.initDataChoices()
             for key in self._dataListsAndLabels:
                 self._eventControlBox.addWidget(self._dataListsAndLabels[key])
-                print "Adding ", key
 
             self._eventControlBox.addWidget(self._drawRawOption)
 
@@ -353,15 +352,15 @@ class evd(QtGui.QWidget):
 
         # Put the layout together
         grid = QtGui.QGridLayout()
-        grid.addLayout(self._eventControlBox,0,0)
+        grid.addLayout(self._eventControlBox,0,0,1,1)
         # grid.addLayout(self._eventControlBox,2,0,nviews+1,1)
-        grid.addLayout(self._dataBox,0,1,2,2)
+        grid.addLayout(self._dataBox,0,1,2,5)
         grid.addWidget(self.statusBar,2,0,1,2)
         grid.addWidget(self._screenCaptureButton,2,2,1,1)
         self.setLayout(grid)    
 
         
-        self.setGeometry(800, 300, 800, 800)
+        self.setGeometry(800, 300, 1200, 800)
         self.setWindowTitle('Event Display')    
         self.show()
 
@@ -383,13 +382,19 @@ class evd(QtGui.QWidget):
         self._dataListsAndLabels.update({'Vertex': ComboBoxWithKeyConnect()})
         self._dataListsAndLabels['Vertex'].connectOwnerKPE(self.keyPressEvent)
 
+        self._dataListsAndLabels.update({'Endpoint2dLabel': QtGui.QLabel("Endpoint2d:")})
+        self._dataListsAndLabels.update({'Endpoint2d': ComboBoxWithKeyConnect()})
+        self._dataListsAndLabels['Endpoint2d'].connectOwnerKPE(self.keyPressEvent)
+
         self._dataListsAndLabels['Hits'].addItem("--None--")
         self._dataListsAndLabels['Clusters'].addItem("--None--")
         self._dataListsAndLabels['Vertex'].addItem("--None--")
+        self._dataListsAndLabels['Endpoint2d'].addItem("--None--")
         # self._dataListsAndLabels['Hits'].addItem("item 3")
         self._dataListsAndLabels['Hits'].activated[str].connect(self.hitsChoiceChanged)
         self._dataListsAndLabels['Clusters'].activated[str].connect(self.clusterChoiceChanged)
         self._dataListsAndLabels['Vertex'].activated[str].connect(self.vertexChoiceChanged)
+        self._dataListsAndLabels['Endpoint2d'].activated[str].connect(self.endpointChoiceChanged)
 
     def updateDataChoices(self):
         if self._mode == "daq":
@@ -416,12 +421,21 @@ class evd(QtGui.QWidget):
                     for item in self._baseData._dataHandle._fileInterface.getListOfKeys()['vertex']:
                         self._dataListsAndLabels['Vertex'].addItem(item)
 
+                if key == 'endpoint2d':
+                    self._dataListsAndLabels['Endpoint2d'].clear()
+                    self._dataListsAndLabels['Endpoint2d'].addItem("--Select--")
+                    for item in self._baseData._dataHandle._fileInterface.getListOfKeys()['endpoint2d']:
+                        self._dataListsAndLabels['Endpoint2d'].addItem(item)
+
     def hitsChoiceChanged(self, text):        # This is the only method monitoring the status of hit drawing
         # So it is responsible for cleaning up the hits if the 
         # choice changes
         # if text == '--None--' or text == '--Select--':
         for view in range(0,self._baseData._nviews):
             self._drawerList[view].clearHits()
+
+        self._baseData._dataHandle.remove_drawing_process('hit')
+
 
         # print "Hits choice changed to ", text
         if 'hit' in self._baseData._dataHandle._fileInterface.getListOfKeys():
@@ -439,7 +453,10 @@ class evd(QtGui.QWidget):
         # if text == '--None--' or text == '--Select--':
         for view in range(0,self._baseData._nviews):
             self._drawerList[view].clearClusters()
-                
+        
+        self._baseData._dataHandle.remove_drawing_process('cluster')
+
+
         # print "Cluster choice changed to ", text
         if 'cluster' in self._baseData._dataHandle._fileInterface.getListOfKeys():
             if text in self._baseData._dataHandle._fileInterface.getListOfKeys()['cluster']:
@@ -454,9 +471,15 @@ class evd(QtGui.QWidget):
         # So it is responsible for cleaning up the clusters if the 
         # choice changes
         # if text == '--None--' or text == '--Select--':
+
+        # print self._baseData._dataHandle._daughterProcesses
+
         for view in range(0,self._baseData._nviews):
             self._drawerList[view].clearVertices()
-                
+
+        self._baseData._dataHandle.remove_drawing_process('vertex')
+
+
         # print "vertex choice changed to ", text
         if 'vertex' in self._baseData._dataHandle._fileInterface.getListOfKeys():
             if text in self._baseData._dataHandle._fileInterface.getListOfKeys()['vertex']:
@@ -464,6 +487,26 @@ class evd(QtGui.QWidget):
                 self._baseData._dataHandle.add_drawing_process('vertex',text)
             else:
                 self._baseData._dataHandle.remove_drawing_process('vertex')
+        self.updateImage()
+
+    def endpointChoiceChanged(self,text):
+        # This is the only method monitoring the status of vertex drawing
+        # So it is responsible for cleaning up the clusters if the 
+        # choice changes
+        # if text == '--None--' or text == '--Select--':
+        for view in range(0,self._baseData._nviews):
+            self._drawerList[view].clearEndpoints()
+                
+        self._baseData._dataHandle.remove_drawing_process('endpoint2d')
+
+
+        # print "vertex choice changed to ", text
+        if 'endpoint2d' in self._baseData._dataHandle._fileInterface.getListOfKeys():
+            if text in self._baseData._dataHandle._fileInterface.getListOfKeys()['endpoint2d']:
+                # print "Trying to add the clusters process ..."
+                self._baseData._dataHandle.add_drawing_process('endpoint2d',text)
+            else:
+                self._baseData._dataHandle.remove_drawing_process('endpoint2d')
         self.updateImage()
 
     def rawChoiceChanged(self):
@@ -587,6 +630,17 @@ class evd(QtGui.QWidget):
             vertices = procs['vertex'].get_vertices(view)
             # print vertices
             self._drawerList[view].drawVertices(vertices)
+    
+    def drawEndpoints(self):
+        procs = self._baseData._dataHandle._daughterProcesses
+        if 'endpoint2d' not in procs:
+            # This means clusters aren't being drawn, bail
+            return
+        # print procs.keys()
+        for view in range(0,self._baseData._nviews):
+            vertices = procs['endpoint2d'].get_endpoints(view)
+            # print vertices
+            self._drawerList[view].drawEndpoints(vertices)
 
 
     def updateImage(self):
@@ -616,6 +670,10 @@ class evd(QtGui.QWidget):
               if self._dataListsAndLabels['Vertex'].currentText() != '--None--':
                 self.drawVertices()
                 drawn = True
+            if self._dataListsAndLabels['Endpoint2d'].currentText() != '--Select--':
+              if self._dataListsAndLabels['Endpoint2d'].currentText() != '--None--':
+                self.drawEndpoints()
+                drawn = True
 
         if not drawn:
           self.drawBlank()
@@ -628,6 +686,7 @@ class evd(QtGui.QWidget):
             self._drawerList[view].clearHits()
             self._drawerList[view].clearClusters()
             self._drawerList[view].clearVertices()
+            self._drawerList[view].clearEndpoints()
 
     def nextEvent(self):
       # if self._mode == "daq":

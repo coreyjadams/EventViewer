@@ -141,6 +141,31 @@ class vertexInterface(object):
   def initialize(self):
     self._process.initialize()
 
+class endpointInterface(object):
+
+  def __init__(self):
+    super(endpointInterface, self).__init__()
+    # print "In the init function for the hit interface"
+    gSystem.Load("libLArLite_LArUtil")
+    self._process = fmwk.DrawEndpoint2d()
+    self._producer = ""
+    self._nviews=larutil.Geometry.GetME().Nviews()
+    self._c2p = fmwk.Converter()
+
+  def get_endpoints(self,view):
+    v = []
+    v.append(np.array(self._c2p.Convert(self._process.getWireByPlane(view))))
+    v.append(np.array(self._c2p.Convert(self._process.getTimeByPlane(view))))
+    return v
+
+  def setProducer(self, prod):
+    self._producer = str(prod)
+    self._process.setProducer(self._producer)
+
+  def initialize(self):
+    self._process.initialize()
+
+
 class clusterInterface(object):
 
   def __init__(self):
@@ -296,6 +321,11 @@ class larliteInterface(object):
           self._my_proc.add_process(self._daughterProcesses[dataProduct]._process)
           self._daughterProcesses[dataProduct].setProducer(producer)
           self._daughterProcesses[dataProduct].initialize()
+        if dataProduct == 'endpoint2d':
+          self._daughterProcesses.update({dataProduct : endpointInterface()} )
+          self._my_proc.add_process(self._daughterProcesses[dataProduct]._process)
+          self._daughterProcesses[dataProduct].setProducer(producer)
+          self._daughterProcesses[dataProduct].initialize()
         self.processEvent(True)
       else:
         print "Failed to find producer ", producer
@@ -335,22 +365,24 @@ class larliteInterface(object):
     if not self._mgr.is_open():
       return 0,0
 
-    # Define the larlite types to get:
-    types = dict()
-    # types.update({'vertex': fmwk.event_vertex})
-    types.update({'hit': fmwk.data.kHit})
-    types.update({'cluster': fmwk.data.kCluster})
+    return self._mgr.run_id(), self._mgr.event_id()
 
 
-    # Get an event vector out of this file, and use it to
-    # get the run and event info
-    # Any old data product will do, but don't use wires
-    keys = self._fileInterface.getListOfKeys()
-    # print keys
-    for key in keys:
-      # print key
-      # print keys[key][0]
-      if key in types:
-        d = self._mgr.get_data(types[key], keys[key][0])
-        return d.run(), d.event_id()
-    # d = mgr.get_data(fmwk.event_hit)("cccluster")
+    # # Define the larlite types to get:
+    # types = dict()
+    # # types.update({'vertex': fmwk.event_vertex})
+    # types.update({'hit': fmwk.data.kHit})
+    # types.update({'cluster': fmwk.data.kCluster})
+
+
+    # # Get an event vector out of this file, and use it to
+    # # get the run and event info
+    # # Any old data product will do, but don't use wires
+    # keys = self._fileInterface.getListOfKeys()
+    # # print keys
+    # for key in keys:
+    #   # print key
+    #   # print keys[key][0]
+    #   if key in types:
+    #     d = self._mgr.get_data(types[key], keys[key][0])
+    # # d = mgr.get_data(fmwk.event_hit)("cccluster")
