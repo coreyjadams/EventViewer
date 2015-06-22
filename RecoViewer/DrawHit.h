@@ -24,9 +24,9 @@
    doxygen documentation!
  */
 
-namespace larlite {
+namespace evd {
 
-  class DrawHit : public ana_base {
+  class DrawHit : public larlite::ana_base {
 
   public:
 
@@ -44,7 +44,7 @@ namespace larlite {
     /** IMPLEMENT in DrawCluster.cc! 
         Analyze a data event-by-event  
     */
-    virtual bool analyze(storage_manager* storage);
+    virtual bool analyze(larlite::storage_manager* storage);
 
     /** IMPLEMENT in DrawCluster.cc! 
         Finalize method to be called after all events processed.
@@ -78,7 +78,7 @@ namespace larlite {
 
   };
 
-} // larlite
+} // evd
 
 #endif
 /** @} */ // end of doxygen group 

@@ -1,6 +1,7 @@
 
 from fileInterface import fileInterface
 from larlite import larlite as fmwk
+# from larlite import evd as evd
 import numpy as np
 import sys
 from ROOT import *
@@ -12,10 +13,10 @@ class rawDaqInterface(object):
   def __init__(self):
     super(rawDaqInterface, self).__init__()
     # gSystem.Load("libEventViewer_RawViewer.so")
-    self._process = fmwk.DrawLariatDaq(LARIAT_TIME_TICKS)
+    self._process = evd.DrawLariatDaq(LARIAT_TIME_TICKS)
     self._producer = ""
     self._nviews=larutil.Geometry.GetME().Nviews()
-    self._c2p = fmwk.Converter()
+    self._c2p = evd.Converter()
     self._hasFile = False
     self._lastProcessed = -1
     self._event = 0
@@ -64,7 +65,7 @@ class rawDataInterface(object):
   def __init__(self):
     super(rawDataInterface, self).__init__()
     gSystem.Load("libEventViewer_RawViewer.so")
-    self._process = fmwk.DrawRaw()
+    self._process = evd.DrawRaw()
     self._producer = ""
     self._nviews=larutil.Geometry.GetME().Nviews()
     self._c2p = fmwk.Converter()
@@ -99,7 +100,7 @@ class hitInterface(object):
     self._process = fmwk.DrawHit()
     self._producer = ""
     self._nviews=larutil.Geometry.GetME().Nviews()
-    self._c2p = fmwk.Converter()
+    self._c2p = evd.Converter()
 
   def get_hits(self, view):
     h = []
@@ -126,7 +127,7 @@ class vertexInterface(object):
     self._process = fmwk.DrawVertex()
     self._producer = ""
     self._nviews=larutil.Geometry.GetME().Nviews()
-    self._c2p = fmwk.Converter()
+    self._c2p = evd.Converter()
 
   def get_vertices(self,view):
     v = []
@@ -150,7 +151,7 @@ class endpointInterface(object):
     self._process = fmwk.DrawEndpoint2d()
     self._producer = ""
     self._nviews=larutil.Geometry.GetME().Nviews()
-    self._c2p = fmwk.Converter()
+    self._c2p = evd.Converter()
 
   def get_endpoints(self,view):
     v = []
@@ -174,7 +175,7 @@ class clusterInterface(object):
     self._process = fmwk.DrawCluster()
     self._producer = ""
     self._nviews=larutil.Geometry.GetME().Nviews()
-    self._c2p = fmwk.Converter()
+    self._c2p = evd.Converter()
 
   def get_clusters(self,view):
     # return a packaged up set of all the clusters

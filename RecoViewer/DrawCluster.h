@@ -18,12 +18,12 @@
 #include "Analysis/ana_base.h"
 #include "LArUtil/Geometry.h"
 
-namespace larlite {
+namespace evd {
   /**
      \class DrawCluster
      User custom analysis class made by SHELL_USER_NAME
    */
-  class DrawCluster : public ana_base{
+  class DrawCluster : public larlite::ana_base{
   
   public:
 
@@ -41,7 +41,7 @@ namespace larlite {
     /** IMPLEMENT in DrawCluster.cc! 
         Analyze a data event-by-event  
     */
-    virtual bool analyze(storage_manager* storage);
+    virtual bool analyze(larlite::storage_manager* storage);
 
     /** IMPLEMENT in DrawCluster.cc! 
         Finalize method to be called after all events processed.

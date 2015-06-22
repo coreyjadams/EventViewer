@@ -6,11 +6,10 @@
 #include <fstream>
 #include "TChain.h"
 
-namespace larlite {
+namespace evd {
 
   DrawLariatDaq::DrawLariatDaq(int ticks){ 
-    wiredata = new std::vector<std::vector<std::vector<unsigned short> > > ;
-    wiredataOUT = new std::vector<std::vector<std::vector<float> > > ;
+    wiredataIN = new std::vector<std::vector<std::vector<unsigned short> > > ;
     branches.resize(64);
     if (ticks == -1)
       _n_time_ticks = 3072;
@@ -22,7 +21,7 @@ namespace larlite {
 
   DrawLariatDaq::~DrawLariatDaq(){
     // std::cout << "\n\n\nDestructing the drawer!\n\n\n";
-    delete wiredata;
+    delete wiredataIN;
     delete c;
     // for (auto branch : branches){
       // delete branch;
@@ -33,12 +32,25 @@ namespace larlite {
 
     _event_no=0;
     _run=0;
+    _spill=0;
 
-    // Initialize the geoService object:
-    geoService = larutil::Geometry::GetME();
 
     // Initialize data holder:
     // Resize data holder to accomodate planes and wires:
+    if (wiredataIN -> size() != geoService -> Nviews())
+      wiredataIN->resize(geoService -> Nviews());
+     
+    // resize to the right number of planes
+    for (unsigned int p = 0; p < geoService -> Nviews(); p ++){
+      // resize to the right number of wires
+      if (wiredataIN->at(p).size() != geoService->Nwires(p) )
+        wiredataIN->at(p).resize(geoService->Nwires(p));
+        // Resize the wires to the right length
+        for (auto & vec : wiredataIN->at(p)){
+          vec.resize(_n_time_ticks);
+        }
+    }
+
     if (wiredata -> size() != geoService -> Nviews())
       wiredata->resize(geoService -> Nviews());
      
@@ -53,21 +65,6 @@ namespace larlite {
         }
     }
 
-    if (wiredataOUT -> size() != geoService -> Nviews())
-      wiredataOUT->resize(geoService -> Nviews());
-     
-    // resize to the right number of planes
-    for (unsigned int p = 0; p < geoService -> Nviews(); p ++){
-      // resize to the right number of wires
-      if (wiredataOUT->at(p).size() != geoService->Nwires(p) )
-        wiredataOUT->at(p).resize(geoService->Nwires(p));
-        // Resize the wires to the right length
-        for (auto & vec : wiredataOUT->at(p)){
-          vec.resize(_n_time_ticks);
-        }
-    }
-
-    // std::cout << "\n\nCompleted initialize.\n\n";
     return;
 
   }
@@ -87,28 +84,13 @@ namespace larlite {
       // to larsoft channel.  Then, use larsoft channel
       // to map to the wire location.
       c -> SetBranchAddress("run",&_run);
-      c -> SetBranchAddress("spill",&_event_no);
+      c -> SetBranchAddress("event_counter",&_event_no);
+      c -> SetBranchAddress("spill",&_spill);
 
       for(int channel = 0; channel < _n_channels; channel ++ ){
 
-        // // Skip the extra channels:
-        // if (i_card == _n_cards -1 && channel >= _n_channels/2) {
-        //   continue;
-        // }
-
-        // int lar_channel = getLarsoftChannel(i_card, channel);
-        // lar_channel_usage[lar_channel] ++;
-        // if (lar_channel_usage[lar_channel] > 1){
-        //   std::cout << "Found a duplicate channel at " << lar_channel << std::endl;
-        //   // continue;
-        // }
-        // // std::cout << "Card " << i_card << "\tchannel " << channel << "\tlarCH " << lar_channel << std::endl;
-        // int plane = geoService->ChannelToPlane(lar_channel);
-        // int wire  = geoService->ChannelToWire(lar_channel);
         int plane(0),wire(0);
-        // Try another, more stupid and simple way
         int ch = i_card*_n_channels + channel;
-        // if (ch >= 480 ) continue;
         if (ch < 240 ){
           plane = 0;
           wire = 239 - ch;
@@ -118,20 +100,12 @@ namespace larlite {
           wire = 479-ch;
         }
 
-        // if (plane == 1)
-          // std::cout << "["<<i_card <<", " << channel << "] -> "
-                    // << ch << " -> [" << plane << ", " << wire << "]\n";
-        // else if (i_card == 7)
-          // std::cout << "Wire is " << wire << std::endl;
-        // if (wire < 0) continue;
-        // if (wire > 239) continue;
-        // std::cout << "Card" << i_card << "\tchannel " << channel << "\t(p,w) " << plane << ", " << wire << std::endl;
         // Now we know which part of the data to read this channel into;
         char name[20];
         sprintf(name,"channel_%i",channel);
         c -> SetBranchAddress(name,
-            &(wiredata->at(plane).at(wire)[0]),
-            & (branches.at(channel)) );
+            &(wiredataIN->at(plane).at(wire)[0]),
+            &(branches.at(channel)) );
 
         if (lar_channel_usage[ch] > 1){
           std::cout << "Found a duplicate channel at " << ch << std::endl;
@@ -142,21 +116,17 @@ namespace larlite {
 
     // The wire data needs to be pedestal subtracted.
     int i_plane = 0;
-    for (auto & plane : *wiredata){
+    for (auto & plane : *wiredataIN){
       float pedestal =0;
       int i_wire = 0;
       for (auto & wire : plane){
-        // debug printout: get the first value of each wire:
-        // if (i_plane == 1 && i_wire < 64)
-        //   std::cout << "[" << i_plane << ", " << i_wire << "]: {"
-        //             << wire.at(0) << ", " << wire.at(1)
-        //             << ", " << wire.at(2) << "...}\n"; 
+
         for (auto & tick : wire){
           pedestal += tick;
         }
         pedestal /= _n_time_ticks;
         for (unsigned int tick = 0; tick < wire.size(); tick++){
-          wiredataOUT->at(i_plane).at(i_wire).at(tick) = wire.at(tick) - pedestal;
+          wiredata->at(i_plane).at(i_wire).at(tick) = wire.at(tick) - pedestal;
         }
         i_wire ++;
       }
@@ -211,9 +181,10 @@ namespace larlite {
 
   }
 
-  void DrawLariatDaq::setInputFile(std::string s){
+  // override the default behavior
+  void DrawLariatDaq::setInput(std::string s){
     // if the file isn't new, do nothing:
-    if (s == inputFile) return;
+    if (s == producer) return;
     // check to see if this file exists.
     std::cout << "Attempting to open file " << s << std::endl;
     std::ifstream ifile(s);
@@ -223,10 +194,10 @@ namespace larlite {
     }
     else{
       // The file exists, try to read it.
-      inputFile = s;
+      producer = s;
       _current_event = 0;
       c -> Reset();
-      c -> Add(inputFile.c_str());
+      c -> Add(producer.c_str());
       _n_events  = c -> GetEntries() / _n_cards;
       if (_n_events == 0){
         _run = 0;
@@ -247,49 +218,6 @@ namespace larlite {
     return lar_channel;
   }
 
-  const std::vector<std::vector<float>> & DrawLariatDaq::getDataByPlane(unsigned int p) const{
-    static std::vector<std::vector<float>> returnNull;
-    if (p >= geoService->Nviews()){
-      std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
-      return returnNull;
-    }
-    else{
-      if (wiredataOUT !=0){
-        // std::cout << "Called get wire, printing a couple values...\n";
-        // std::cout << wiredataOUT->at(p).at(0)[0] << std::endl;
-        // std::cout << wiredataOUT->at(p).at(0)[1] << std::endl;
-        // std::cout << wiredataOUT->at(p).at(0)[2] << std::endl;
-        // std::cout << wiredataOUT->at(p).at(0)[3] << std::endl;
-        return wiredataOUT->at(p);
-      }
-      else{
-        return returnNull;
-      }
-    }
-    
-  }
-
-  const std::vector<float> & DrawLariatDaq::getWireData(unsigned int plane, unsigned int wire) const{
-    static std::vector<float> returnNull;
-    if (plane >= geoService->Nviews()){
-      std::cerr << "ERROR: Request for nonexistant plane " << plane << std::endl;
-      return returnNull;
-    }
-    if (wire >= geoService->Nwires(plane)){
-        std::cerr << "ERROR: Request for nonexistant wire " << wire << std::endl;
-        return returnNull;
-    }
-    else{
-
-      if (wiredataOUT !=0){
-        return wiredataOUT->at(plane).at(wire);
-      }
-      else{
-        return returnNull;
-      }
-    }
-    
-  }
 
 
 }

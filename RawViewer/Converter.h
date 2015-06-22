@@ -34,7 +34,7 @@ typedef _object PyObject;
    User defined class Converter ... these comments are used to generate
    doxygen documentation!
  */
-namespace larlite {
+namespace evd {
 
 class Converter{
 

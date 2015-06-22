@@ -9,11 +9,13 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ class larlite::DrawRaw+;
-#pragma link C++ class larlite::Converter+;
-#pragma link C++ class larlite::DrawLariatDaq+;
+#pragma link C++ class evd::RawBase+;
+#pragma link C++ class evd::DrawRaw+;
+#pragma link C++ class evd::Converter+;
+#pragma link C++ class evd::DrawLariatDaq+;
 //ADD_NEW_CLASS ... do not change this line
 #endif
+
 
 
 

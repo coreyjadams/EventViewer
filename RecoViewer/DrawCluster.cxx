@@ -6,7 +6,7 @@
 #include "DataFormat/cluster.h"
 #include "LArUtil/DetectorProperties.h"
 
-namespace larlite {
+namespace evd {
 
   DrawCluster::DrawCluster(){
     _name="DrawCluster";
@@ -48,7 +48,7 @@ namespace larlite {
     return true;
   }
   
-  bool DrawCluster::analyze(storage_manager* storage) {
+  bool DrawCluster::analyze(larlite::storage_manager* storage) {
   
     //
     // Do your event-by-event analysis here. This function is called for 
@@ -92,11 +92,11 @@ namespace larlite {
     
     }
 
-    auto ev_clus = storage->get_data<event_cluster>(producer);
+    auto ev_clus = storage->get_data<larlite::event_cluster>(producer);
     if(!ev_clus)
       return false;
     if(!ev_clus->size()) {
-      print(msg::kWARNING,__FUNCTION__,
+      print(larlite::msg::kWARNING,__FUNCTION__,
       Form("Skipping event %d since no cluster found...",ev_clus->event_id()));
       return false;
     }

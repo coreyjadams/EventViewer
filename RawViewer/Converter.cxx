@@ -5,7 +5,7 @@
 #include <iostream>
 #include <exception>
 
-namespace larlite {
+namespace evd {
 
   PyObject* Converter::Convert(const std::vector<std::string>& str_array) const
   {

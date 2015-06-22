@@ -4,13 +4,13 @@
 #include "DrawRaw.h"
 #include "DataFormat/wire.h"
 
-namespace larlite {
+namespace evd {
 
   DrawRaw::DrawRaw(){ 
     _name="DrawRaw"; 
     _fout=0;
-    wiredata = new std::vector<std::vector<std::vector<float> > > ;
-  
+    // wiredata = new std::vector<std::vector<std::vector<float> > > ;
+    producer = "caldata";
   }
 
   bool DrawRaw::initialize() {
@@ -23,7 +23,6 @@ namespace larlite {
     //
 
     // Initialize the geoService object:
-    geoService = larutil::Geometry::GetME();
 
     // Initialize data holder:
     // Resize data holder to accomodate planes and wires:
@@ -41,7 +40,7 @@ namespace larlite {
 
   }
   
-  bool DrawRaw::analyze(storage_manager* storage) {
+  bool DrawRaw::analyze(larlite::storage_manager* storage) {
   
     //
     // Do your event-by-event analysis here. This function is called for 
@@ -70,6 +69,7 @@ namespace larlite {
         wiredata->at(geoService->ChannelToPlane(ch))[geoService->ChannelToWire(ch)] = wire.Signal();
     }
 
+
     return true;
   }
 
@@ -91,44 +91,6 @@ namespace larlite {
     delete wiredata;
 
     return true;
-  }
-
-  const std::vector<std::vector<float>> & DrawRaw::getDataByPlane(unsigned int p) const{
-    static std::vector<std::vector<float>> returnNull;
-    if (p >= geoService->Nviews()){
-      std::cerr << "ERROR: Request for nonexistant plane " << p << std::endl;
-      return returnNull;
-    }
-    else{
-      if (wiredata !=0){
-        return wiredata->at(p);
-      }
-      else{
-        return returnNull;
-      }
-    }
-    
-  }
-
-  const std::vector<float> & DrawRaw::getWireData(unsigned int plane, unsigned int wire) const{
-    static std::vector<float> returnNull;
-    if (plane >= geoService->Nviews()){
-      std::cerr << "ERROR: Request for nonexistant plane " << plane << std::endl;
-      return returnNull;
-    }
-    if (wire >= geoService->Nwires(plane)){
-        std::cerr << "ERROR: Request for nonexistant wire " << wire << std::endl;
-        return returnNull;
-    }
-    else{
-      if (wiredata !=0){
-        return wiredata->at(plane).at(wire);
-      }
-      else{
-        return returnNull;
-      }
-    }
-    
   }
 
 

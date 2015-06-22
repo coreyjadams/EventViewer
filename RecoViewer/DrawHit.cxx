@@ -4,7 +4,7 @@
 #include "DrawHit.h"
 #include "DataFormat/hit.h"
 
-namespace larlite {
+namespace evd {
 
 
   DrawHit::DrawHit(){
@@ -40,7 +40,7 @@ namespace larlite {
 
   }
   
-  bool DrawHit::analyze(storage_manager* storage) {
+  bool DrawHit::analyze(larlite::storage_manager* storage) {
   
     //
     // Do your event-by-event analysis here. This function is called for 

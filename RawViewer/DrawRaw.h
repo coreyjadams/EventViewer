@@ -17,13 +17,14 @@
 
 #include "Analysis/ana_base.h"
 #include "LArUtil/Geometry.h"
+#include "RawBase.h"
 
-namespace larlite {
+namespace evd {
   /**
      \class DrawRaw
      User custom analysis class made by SHELL_USER_NAME
    */
-  class DrawRaw : public ana_base{
+  class DrawRaw : public larlite::ana_base, public RawBase{
   
   public:
 
@@ -41,29 +42,13 @@ namespace larlite {
     /** IMPLEMENT in DrawRaw.cc! 
         Analyze a data event-by-event  
     */
-    virtual bool analyze(storage_manager* storage);
+    virtual bool analyze(larlite::storage_manager* storage);
 
     /** IMPLEMENT in DrawRaw.cc! 
         Finalize method to be called after all events processed.
     */
     virtual bool finalize();
 
-    void setProducer(std::string s){producer = s;}
-
-    // Function to get the data by plane:
-    const std::vector<std::vector<float>> & getDataByPlane(unsigned int p) const;
-
-    const std::vector<float> & getWireData(unsigned int plane, unsigned int wire) const;
-
-  protected:
-    
-    //vector of [tpc][wire][time]
-    std::vector<std::vector<std::vector<float>>> * wiredata;
-    // std::vector<float> * data;
-
-    const larutil::Geometry * geoService;
-
-    std::string producer;
 
   };
 }

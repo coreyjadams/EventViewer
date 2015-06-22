@@ -14,6 +14,7 @@ class geoBase(object):
     self._time2Cm = 0.1
     self._wire2Cm = 0.4
     self._levels = [ (-15,15), (-10,30) ]
+    self._name = "null"
 
   def nViews(self):
     return self._nViews
@@ -36,8 +37,11 @@ class geoBase(object):
   def wire2cm(self):
     return self._wire2Cm
 
-  def timewire2cm(self):
+  def time2cm(self):
     return self._time2Cm
+
+  def name(self):
+    return self._name
 
 class geometry(geoBase):
 
@@ -62,6 +66,7 @@ class microboone(geometry):
     larutil.LArUtilManager.Reconfigure(fmwk.geo.kMicroBooNE)
     super(microboone, self).__init__()
     self._levels = [ (-15,15),(-15,15),(-10,10) ]
+    self._name = "uboone"
 
 class argoneut(geometry):
 
@@ -70,7 +75,8 @@ class argoneut(geometry):
     # and then call the base class __init__
     larutil.LArUtilManager.Reconfigure(fmwk.geo.kArgoNeuT)
     super(argoneut, self).__init__()
-    self._levels = [ (-15,15),(2,20) ]
+    self._levels = [ (-15,60),(-5,80) ]
+    self._name = "argoneut"
 
 class lariat(geometry):
 
@@ -82,7 +88,8 @@ class lariat(geometry):
     # lariat has a different number of time ticks
     # fix it directly:
     self._tRange = 3072/2
-    self._levels = [ (-15,15),(-10,10) ]
+    self._levels = [ (-15,15),(-2,20) ]
+    self._name = "lariat"
 
 
 

@@ -1,8 +1,10 @@
 
 from PyQt4.QtGui import QFileDialog
-from data import wire
-
-from ROOT import evd
+from PyQt4 import QtCore
+from data import *
+from larlite import larlite as fmwk
+from ROOT import *
+import os
 
 # This class exists as the basic interface for controlling events
 # Defines a lot of functions but the final implementation needs to be done
@@ -16,7 +18,7 @@ class event(object):
     super(event, self).__init__()
     self._run = 0
     self._event = 0
-
+    self._subrun = 0
 
     self._lastProcessed = -1
 
@@ -25,6 +27,9 @@ class event(object):
 
   def prev(self):
     print "Called prev event"
+
+  def subrun(self):
+    return self._subrun
 
   def run(self):
     return self._run
@@ -38,107 +43,271 @@ class event(object):
   def setEvent(self,e):
     self._event = e
 
-  def goToEvent(self,e):
-    print "Requested jump to event ", e
+  def setSubRun(self, s):
+    self._subrun = s
 
 
 
-
-class lariat_manager(event, wire):
-  """docstring for lariat_manager"""
-  def __init__(self, geom, file=None):
-    super(lariat_manager, self).__init__()
-
-    # override the wire drawing process for lariat
-    self._process = evd.DrawLariatDaq()
-    self._hasFile = False
-    self._file = ""
-
+class manager(event):
+  """docstring for manager"""
+  def __init__(self, geom,file=None):
+    super(manager, self).__init__()
     self._geom = geom
+    
+    # The manager needs to know about the gui and the view manager
+    # It needs to be able to call a few of their methods to update things
+    self._gui = None
+    self._view_manager = None
+    self._hasFile = False
+
+  def connectGui(self,gui):
+    self._gui = gui
+
+  def connectViewManager(self,view_manager):
+    self._view_manager = view_manager
+
+  def next(self):
+    print "Called next"
+    # self._process.nextEvent()  
 
 
-    if file != None:
-      self.setInputFile(file)
+  def prev(self):
+    print "Called prev"
+    # self._process.prevEvent()   
+
+  def goToEvent(self,event):
+    print "Requested jump to event ", event
 
   def selectFile(self):
     filePath = str(QFileDialog.getOpenFileName())
     self.setInputFile(filePath)
     print "Selected file is ", filePath
+    return filePath
+
+  def setInputFile(self,file):
+    pass
+
+  def hasWireData(self):
+    return False
+
+  def getPlane(self,plane):
+    pass
+
+
+class larlite_manager(manager,QtCore.QObject):
+  fileChanged = QtCore.pyqtSignal()
+  eventChanged = QtCore.pyqtSignal()
+  """docstring for lariat_manager"""
+  def __init__(self, geom, file=None):
+    super(larlite_manager, self).__init__(geom,file)
+    manager.__init__(self,geom,file)
+    QtCore.QObject.__init__(self)
+    # For the larlite manager, need both the ana_processor and 
+    # the storage manager
+    self._process = fmwk.ana_processor()
+    self._mgr = fmwk.storage_manager()
+    self._drawableItems = drawableItems()
+
+    self._drawnClasses = dict()
+
+    self.setInputFile(file)
+
+    # Toggle whether or not to draw wires:
+    self._drawWires = False
+    self._wireDrawer = None
+
+    # Lariat has special meanings to event/spill/run
+    self._spill = 0
+
+  def pingFile(self,file):
+    """this function opens the file and determines what is available to draw"""
+    # This function opens the file to see
+    # what data products are available
+    
+    # Open the file
+    f = TFile(file)
+    # Use the larlite_id_tree to find out how many entries are in the file:
+    self._n_entries = f.larlite_id_tree.GetEntries()
+    # prepare a dictionary of data products
+    lookUpTable = dict()
+    # Loop over the keys (list of trees)
+    for key in f.GetListOfKeys():
+      # keys are dataproduct_producer_tree
+      thisKeyList = key.GetName().split('_')
+      # gets three items in thisKeyList, which is a list
+      # [dataProduct, producer, 'tree'] (don't care about 'tree')
+      # check if the data product is in the dict:
+      if thisKeyList[0] in lookUpTable:
+        # extend the list:
+        lookUpTable[thisKeyList[0]] += (thisKeyList[1], )
+      else:
+        lookUpTable.update( {thisKeyList[0] : (thisKeyList[1],)})
+
+    self._keyTable = lookUpTable
+
+  def setInputFile(self,file):
+    # First, check that the file exists:
+    try:
+      if not os.path.exists(file):
+        print "ERROR: requested file does not exist."
+        return
+    except Exception, e:
+      return
+    # Next, verify it is a root file:
+    if not file.endswith(".root"):
+      print "ERROR: must supply a root file."
+      return
+    # Finally, ping the file to see what is available to draw
+    self.pingFile(file)
+    if len(self._keyTable) > 0:
+      self._hasFile = True
+      # add this file to the storage manager here
+      self._mgr.reset()
+      self._mgr.add_in_filename(file)
+      self._mgr.set_io_mode(fmwk.storage_manager.kREAD)
+      self._mgr.open()
+      # setup the processor in the same way
+      self._process.reset()
+      self._process.add_input_file(file)
+      self._process.set_io_mode(fmwk.storage_manager.kREAD)
+
+      self._lastProcessed = -1
+      self.goToEvent(0)
+      self.fileChanged.emit()
+
+
+  # This function will return all producers for the given product
+  def getProducers(self,product):
+    try:
+      return self._keyTable[product]
+    except:
+      return None
+
+  # This function returns the list of products that can be drawn:
+  def getDrawableProducts(self):
+    return self._drawableItems.getListOfItems()
+
+
+  # override the run,event,subrun functions:
+  def run(self):
+    if not self._mgr.is_open():
+      return 0
+    return self._mgr.run_id()
+
+  def event(self):
+    if not self._mgr.is_open():
+      return 0
+
+    return self._mgr.event_id()
+
+  def subrun(self):
+    if not self._mgr.is_open():
+      return 0
+
+    return self._mgr.subrun_id()
 
   # override the functions from manager as needed here
   def next(self):
     # print "Called next"
-    self._process.nextEvent()  
+    # Check that this isn't the last event:
+    if self._event < self._n_entries - 1:
+      self.goToEvent(self._event + 1)
+    else:
+      print "On the last event, can't go to next."
 
   def prev(self):
-    # print "Called prev"
-    self._process.prevEvent()    
-
-  def setInputFile(self, file):
-    self._file = file
-    if file == None:
-      return
+    if self._event != 0:
+      self.goToEvent(self._event - 1) 
     else:
-      self._process.setInput(file)
-      self._hasFile = True
+      print "On the first event, can't go to previous."
+
+  # this function is meant for the first request to draw an object or
+  # when the producer changes
+  def redrawProduct(self,product,producer,view_manager):
+    # print "Received request to redraw ", product, " by ",producer
+    # First, determine if there is a drawing process for this product:
+    if producer == None:
+      self._drawnClasses[product].clearDrawnObjects(self._view_manager)
+      self._drawnClasses.pop(product)
+      return
+    if product in self._drawnClasses:
+      self._drawnClasses[product].setProducer(producer)
+      self.processEvent(True)
+      self._drawnClasses[product].clearDrawnObjects(self._view_manager)
+      self._drawnClasses[product].drawObjects(self._view_manager)
+      return
+
+
+    # Now, draw the new product
+    if product in self._drawableItems.getListOfItems():
+      # drawable items contains a reference to the class, so instantiate it
+      drawingClass = self._drawableItems.getDict()[product]()
+      drawingClass.setProducer(producer)
+      self._process.add_process(drawingClass._process)
+      self._drawnClasses.update({product : drawingClass})
+      # Need to process the event
+      self.processEvent(True)
+      drawingClass.drawObjects(self._view_manager)
 
   def processEvent(self,force = False):
-    if not self._hasFile:
+    if len(self._drawnClasses) == 0 and not self._drawWires:
+      self._mgr.go_to(self._event)
       return
     if self._lastProcessed != self._event or force:
-      self._process.goToEvent(self._event)
+      self._process.process_event(self._event)
+      self._mgr.go_to(self._event)
       self._lastProcessed = self._event
 
+  def goToEvent(self,event,force = False):
+    self.setEvent(event)
+    self.processEvent()
+    self.clearAll()
+    if self._view_manager != None:
+      self._view_manager.drawPlanes(self)
+    self.drawFresh()
+    self.eventChanged.emit()
+
+  def clearAll(self):
+    for recoProduct in self._drawnClasses:
+      self._drawnClasses[recoProduct].clearDrawnObjects(self._view_manager)
+
+
+  def drawFresh(self):
+    # # wires are special:
+    # if self._drawWires:
+    #   self._view_manager.drawPlanes(self)
+    # Draw objects in a specific order defined by drawableItems
+    order = self._drawableItems.getListOfItems()
+    for item in order:
+      if item in self._drawnClasses:
+        self._drawnClasses[item].drawObjects(self._view_manager)
+
+
+
+
+  # handle all the wire stuff:
+  def toggleWires(self, wiresBool):
+    # Now, either add the drawing process or remove it:
+    if 'wires' not in self.getDrawableProducts():
+      print "No wire data available to draw"
+      return
+    self._drawWires = wiresBool
+
+    if self._drawWires:
+      self._wireDrawer = recoWire()
+      self._process.add_process(self._wireDrawer._process)
+      self.processEvent(True)
+    else:
+      self._wireDrawer = None   
 
 
   def getPlane(self,plane):
-    if self._hasFile:
-      return self.getPlane(plane)
+    if self._drawWires:
+      return self._wireDrawer.getPlane(plane)
 
 
   def hasWireData(self):
-    if self._hasFile:
+    if self._drawWires:
       return True
-    return False
-
-class rawDaqInterface(object):
-  """docstring for rawDataInterface"""
-  def __init__(self):
-    super(rawDaqInterface, self).__init__()
-    # gSystem.Load("libEventViewer_RawViewer.so")
-    self._process = fmwk.DrawLariatDaq(LARIAT_TIME_TICKS)
-    self._producer = ""
-    self._nviews=larutil.Geometry.GetME().Nviews()
-    self._c2p = fmwk.Converter()
-    self._hasFile = False
-    self._lastProcessed = -1
-    self._event = 0
-    # self._process.setProducer(self._producer)
-
-  def get_img(self):
-    d = []
-    for i in range(0,self._nviews):
-      d.append(np.array(self._c2p.Convert(self._process.getDataByPlane(i))) )
-      # print "got a plane, here is a sample: ", d[i][0][0]
-    return d
-
-  def get_wire(self, plane, wire):
-    if plane > self._nviews:
-      return
-    if wire > 0 and wire < larutil.Geometry.GetME().Nwires(plane):
-      return np.array(self._c2p.Convert(self._process.getWireData(plane,wire)))
-
-  def set_input_file(self, file):
-    self._file = file
-    if file == None:
-      return
     else:
-      self._process.setInputFile(file)
-      self._hasFile = True
-      self._maxEvent = self._process.n_events()
-
-  def processEvent(self,force = False):
-    if self._lastProcessed != self._event or force:
-      self._process.goToEvent(self._event)
-      self._lastProcessed = self._event
-
+      return False    
