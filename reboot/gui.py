@@ -101,6 +101,8 @@ class view_manager(object):
       # set the display to show the wire:
       self._wirePlotItem.setData(wireData)
 
+  def getViewPorts(self):
+    return self._drawerList
 
 
 class gui(QtGui.QWidget):
@@ -126,13 +128,15 @@ class gui(QtGui.QWidget):
 
 
   def update(self):
-    print "Called update"
     # set the text boxes correctly:
-    eventLabel = "Ev: " + str(self._event_manager.event())
+    eventLabel = "Ev: "
     self._eventLabel.setText(eventLabel)
+    self._eventEntry.setText(str(self._event_manager.event()))
     runLabel = "Run: " + str(self._event_manager.run())
     self._runLabel.setText(runLabel)
-
+    subrunLabel = "Subrun: " + str(self._event_manager.subrun())
+    self._subrunLabel.setText(subrunLabel)
+    
     self._view_manager.drawPlanes(self._event_manager)
 
   # This function prepares the buttons such as prev, next, etc and returns a layout
@@ -178,7 +182,8 @@ class gui(QtGui.QWidget):
     self._eventControlBox.addWidget(self._fileSelectButton)
 
     return self._eventControlBox
-    
+  
+
   # this function helps pass the entry of the line edit item to the event control
   def goToEventWorker(self):
     try:
@@ -311,6 +316,11 @@ class gui(QtGui.QWidget):
     self._eastWidget.setMinimumWidth(100)
     return self._eastWidget
 
+  def refreshEastLayout(self):
+    east = getEastLayout()
+    self._eastLayout.setVisible(False)
+    self._eastLayout.setVisible(True)
+
   def initUI(self):
 
 
@@ -339,15 +349,15 @@ class gui(QtGui.QWidget):
     # Put the layout together
 
 
-    master = QtGui.QVBoxLayout()
-    slave = QtGui.QHBoxLayout()
-    slave.addWidget(westWidget)
-    slave.addWidget(drawListWidget)
-    slave.addWidget(eastWidget)
-    master.addLayout(slave)
-    master.addWidget(southLayout)
+    self.master = QtGui.QVBoxLayout()
+    self.slave = QtGui.QHBoxLayout()
+    self.slave.addWidget(westWidget)
+    self.slave.addWidget(drawListWidget)
+    self.slave.addWidget(eastWidget)
+    self.master.addLayout(self.slave)
+    self.master.addWidget(southLayout)
 
-    self.setLayout(master)    
+    self.setLayout(self.master)    
 
     # ask the view manager to draw the planes:
     self._view_manager.drawPlanes(self._event_manager)

@@ -1,8 +1,10 @@
 
 from PyQt4.QtGui import QFileDialog
-from data import wire
-
-from ROOT import evd
+from PyQt4 import QtCore
+from data import *
+from larlite import larlite as fmwk
+from ROOT import *
+import os
 
 # This class exists as the basic interface for controlling events
 # Defines a lot of functions but the final implementation needs to be done
@@ -80,17 +82,183 @@ class manager(event):
     filePath = str(QFileDialog.getOpenFileName())
     self.setInputFile(filePath)
     print "Selected file is ", filePath
+    return filePath
+
+  def setInputFile(self,file):
+    pass
+
+  def hasWireData(self):
+    return False
 
 
-class evd_manager(manager, wire):
+class larlite_manager(manager,QtCore.QObject):
+  fileChanged = QtCore.pyqtSignal()
+  eventChanged = QtCore.pyqtSignal()
   """docstring for lariat_manager"""
   def __init__(self, geom, file=None):
-    super(evd_manager, self).__init__(geom,file)
+    super(larlite_manager, self).__init__(geom,file)
+    manager.__init__(self,geom,file)
+    QtCore.QObject.__init__(self)
+    # For the larlite manager, need both the ana_processor and 
+    # the storage manager
+    self._process = fmwk.ana_processor()
+    self._mgr = fmwk.storage_manager()
+    self._drawableItems = drawableItems()
 
-    # override the wire drawing process for lariat
-    self._process = evd.DrawLariatDaq(self._geom.tRange())
+    self._drawnClasses = dict()
 
     self.setInputFile(file)
 
     # Lariat has special meanings to event/spill/run
     self._spill = 0
+
+  def pingFile(self,file):
+    """this function opens the file and determines what is available to draw"""
+    # This function opens the file to see
+    # what data products are available
+    
+    # Open the file
+    f = TFile(file)
+    # Use the larlite_id_tree to find out how many entries are in the file:
+    self._n_entries = f.larlite_id_tree.GetEntries()
+    # prepare a dictionary of data products
+    lookUpTable = dict()
+    # Loop over the keys (list of trees)
+    for key in f.GetListOfKeys():
+      # keys are dataproduct_producer_tree
+      thisKeyList = key.GetName().split('_')
+      # gets three items in thisKeyList, which is a list
+      # [dataProduct, producer, 'tree'] (don't care about 'tree')
+      # check if the data product is in the dict:
+      if thisKeyList[0] in lookUpTable:
+        # extend the list:
+        lookUpTable[thisKeyList[0]] += (thisKeyList[1], )
+      else:
+        lookUpTable.update( {thisKeyList[0] : (thisKeyList[1],)})
+
+    self._keyTable = lookUpTable
+
+  def setInputFile(self,file):
+    # First, check that the file exists:
+    try:
+      if not os.path.exists(file):
+        print "ERROR: requested file does not exist."
+        return
+    except Exception, e:
+      return
+    # Next, verify it is a root file:
+    if not file.endswith(".root"):
+      print "ERROR: must supply a root file."
+      return
+    # Finally, ping the file to see what is available to draw
+    self.pingFile(file)
+    if len(self._keyTable) > 0:
+      self._hasFile = True
+      # add this file to the storage manager here
+      self._mgr.reset()
+      self._mgr.add_in_filename(file)
+      self._mgr.set_io_mode(fmwk.storage_manager.kREAD)
+      self._mgr.open()
+      # setup the processor in the same way
+      self._process.reset()
+      self._process.add_input_file(file)
+      self._process.set_io_mode(fmwk.storage_manager.kREAD)
+
+      self._lastProcessed = -1
+      self.goToEvent(0)
+      self.fileChanged.emit()
+
+
+  # This function will return all producers for the given product
+  def getProducers(self,product):
+    try:
+      return self._keyTable[product]
+    except:
+      return None
+
+  # This function returns the list of products that can be drawn:
+  def getDrawableProducts(self):
+    return self._drawableItems.getListOfItems()
+
+
+  # override the run,event,subrun functions:
+  def run(self):
+    if not self._mgr.is_open():
+      return 0
+    return self._mgr.run_id()
+
+  def event(self):
+    if not self._mgr.is_open():
+      return 0
+
+    return self._mgr.event_id()
+
+  def subrun(self):
+    if not self._mgr.is_open():
+      return 0
+
+    return self._mgr.subrun_id()
+
+  # override the functions from manager as needed here
+  def next(self):
+    # print "Called next"
+    # Check that this isn't the last event:
+    if self._event < self._n_entries - 1:
+      self.goToEvent(self._event + 1)
+    else:
+      print "On the last event, can't go to next."
+
+  def prev(self):
+    if self._event != 0:
+      self.goToEvent(self._event - 1) 
+    else:
+      print "On the first event, can't go to previous."
+
+  # this function is meant for the first request to draw an object or
+  # when the producer changes
+  def redrawProduct(self,product,producer,view_manager):
+    print "Received request to redraw ", product, " by ",producer
+    # First, determine if there is a drawing process for this product:
+    if product in self._drawnClasses:
+      print "Request to change product ", product
+      self._drawnClasses[product].clearDrawnObjects(self._view_manager)
+      self._drawnClasses.pop(product)
+    if producer == None:
+      print "Request to remove product ", product
+      return
+
+    # Now, draw the new product
+    if product in self._drawableItems.getListOfItems():
+      # drawable items contains a reference to the class, so instantiate it
+      drawingClass = self._drawableItems.getDict()[product]()
+      drawingClass.setProducer(producer)
+      self._process.add_process(drawingClass._process)
+      self._drawnClasses.update({product : drawingClass})
+      # Need to process the event
+      self.processEvent(True)
+      drawingClass.drawObjects(self._view_manager)
+
+  def processEvent(self,force = False):
+    if len(self._drawnClasses) == 0:
+      self._mgr.go_to(self._event)
+      return
+    if self._lastProcessed != self._event or force:
+      self._process.process_event(self._event)
+      self._mgr.go_to(self._event)
+      self._lastProcessed = self._event
+
+  def goToEvent(self,event):
+    self.setEvent(event)
+    self.processEvent()
+    self.clearAll()
+    self.drawFresh()
+    self.eventChanged.emit()
+
+  def clearAll(self):
+    for recoProduct in self._drawnClasses:
+      self._drawnClasses[recoProduct].clearDrawnObjects(self._view_manager)
+
+
+  def drawFresh(self):
+    for recoProduct in self._drawnClasses:
+      self._drawnClasses[recoProduct].drawObjects(self._view_manager)

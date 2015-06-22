@@ -155,6 +155,9 @@ class viewport(pg.GraphicsLayoutWidget):
   def autoRange(self):
     pass
 
+  def plane(self):
+    return self._plane
+
   def lockRatio(self, lockAR ):
     ratio = self._geometry.aspectRatio()
     if lockAR:
@@ -174,7 +177,6 @@ class viewport(pg.GraphicsLayoutWidget):
     self.levelChanged()
 
   def drawBlank(self):
-    print "Trying to draw blank data on plane ", self._plane
     self._item.setImage(self._blankData)
     self._item.setLookupTable(self._blankMap.getLookupTable(255))
     self._cmap.setVisible(False)

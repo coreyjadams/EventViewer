@@ -289,7 +289,7 @@ class lariatgui(gui):
       self._drawerList[view].setVisible(True)
 
 
-  def quit(self):
+  def quit(self): 
     if self._event_manager.isRunning():
       self._event_manager.stopSpillRun()
     if self._event_manager.isCycling():
@@ -389,7 +389,6 @@ def main():
   geom = lariat()
 
   # If a file was passed, give it to the manager:
-
 
   manager = lariat_manager(geom)
   manager.parseFileName(args.file)
