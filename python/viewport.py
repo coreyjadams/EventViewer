@@ -8,9 +8,12 @@ class viewport(pg.GraphicsLayoutWidget):
   def __init__(self, geometry,plane=-1):
     super(viewport, self).__init__()
     # add a view box, which is a widget that allows an image to be shown
-    self._view = self.addViewBox(border='k')
+    self._view = self.addViewBox(border=(0,0,0))
+    print self._view.viewRect()
     # add an image item which handles drawing (and refreshing) the image
     self._item = pg.ImageItem(useOpenGL=True)
+    print self._item.viewRect()
+    # self._item._setPen((0,0,0))
     self._view.addItem(self._item)
     # connect the scene to click events, used to get wires
     self.scene().sigMouseClicked.connect(self.mouseClicked)
@@ -150,7 +153,7 @@ class viewport(pg.GraphicsLayoutWidget):
   def setRangeToMax(self):
     xR = (0,self._geometry.wRange(self._plane))
     yR = (0,self._geometry.tRange())
-    self._view.setRange(xRange=xR,yRange=yR, padding=0)
+    self._view.setRange(xRange=xR,yRange=yR, padding=0.002)
 
   def autoRange(self):
     pass

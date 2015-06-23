@@ -24,8 +24,11 @@ class view_manager(object):
     self._geometry = geometry
 
     self._wireDrawer = pg.GraphicsLayoutWidget()
+    self._wireDrawer.setBackground(None)
     self._wirePlot = self._wireDrawer.addPlot()
-    self._wirePlotItem = pg.PlotDataItem()
+    # self._wirePlot.setPen((0,0,0))
+    self._wirePlotItem = pg.PlotDataItem(pen=(0,0,0))
+    # self._wirePlotItem.setBac
     self._wirePlot.addItem(self._wirePlotItem)
     self._wireDrawer.setMaximumHeight(100)
 
@@ -411,46 +414,46 @@ class gui(QtGui.QWidget):
 
 
 
-def sigintHandler(*args):
-    """Handler for the SIGINT signal."""
-    sys.stderr.write('\r')
-    sys.exit()
+# def sigintHandler(*args):
+#     """Handler for the SIGINT signal."""
+#     sys.stderr.write('\r')
+#     sys.exit()
 
-def main():
+# def main():
     
-  parser = argparse.ArgumentParser(description='Python based event display.')
-  geom = parser.add_mutually_exclusive_group()
-  geom.add_argument('-A', '--argoneut',action='store_true',help="Run with the argoneut geometry")
-  geom.add_argument('-U', '--uboone',action='store_true',help="Run with the microboone geometry")
-  geom.add_argument('-L', '--lariat',action='store_true',help="Run with the lariat geometry")
-  parser.add_argument('file',nargs='?',help="Optional input file to use")
-  parser.add_argument('-d',"--daq",action='store_true',help="Run the evd in daq mode.")
-  args = parser.parse_args()
+#   parser = argparse.ArgumentParser(description='Python based event display.')
+#   geom = parser.add_mutually_exclusive_group()
+#   geom.add_argument('-A', '--argoneut',action='store_true',help="Run with the argoneut geometry")
+#   geom.add_argument('-U', '--uboone',action='store_true',help="Run with the microboone geometry")
+#   geom.add_argument('-L', '--lariat',action='store_true',help="Run with the lariat geometry")
+#   parser.add_argument('file',nargs='?',help="Optional input file to use")
+#   parser.add_argument('-d',"--daq",action='store_true',help="Run the evd in daq mode.")
+#   args = parser.parse_args()
 
-  app = QtGui.QApplication(sys.argv)
-  geometry = "uboone"
-  if args.argoneut:
-      geometry = "argoneut"
-  elif args.lariat:
-      geometry = "lariat"
-  if args.daq:
-      mode = "daq"
-      print "Running in daq mode"
-  else:
-    mode = ""
+#   app = QtGui.QApplication(sys.argv)
+#   geometry = "uboone"
+#   if args.argoneut:
+#       geometry = "argoneut"
+#   elif args.lariat:
+#       geometry = "lariat"
+#   if args.daq:
+#       mode = "daq"
+#       print "Running in daq mode"
+#   else:
+#     mode = ""
   
-  ex = gui(geometry,mode,args.file)
+#   ex = gui(geometry,mode,args.file)
 
-  signal.signal(signal.SIGINT, sigintHandler)
-  timer = QtCore.QTimer()
-  timer.start(500)  # You may change this if you wish.
-  timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
+#   signal.signal(signal.SIGINT, sigintHandler)
+#   timer = QtCore.QTimer()
+#   timer.start(500)  # You may change this if you wish.
+#   timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
 
-  app.exec_()
-  # sys.exit(app.exec_())
+#   app.exec_()
+#   # sys.exit(app.exec_())
 
 
-if __name__ == '__main__':
-  main()
+# if __name__ == '__main__':
+#   main()
 
 

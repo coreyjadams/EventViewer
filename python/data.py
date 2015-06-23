@@ -10,9 +10,49 @@ import pyqtgraph as pg
 # It's meant to be inherited from for specific instances
 # There is a class for drawing the following things:
 #   - Raw wire data
-#   - a collection of rectangles (hits and clusters)
-#   - markers (vertices, endpoints, etc)
-#   - splines (for projecting tracks, etc.)
+#   - hits
+#   - clusters
+#   - nothing else ... yet
+
+# To add a class, what you have to do is write a module to process it (larlite ana_processor)
+# Put your class in RecoViewer or wherever.  I use the namespace evd for all of these classes
+# so if you use something else, be sure to import it above from ROOT
+
+# Your class needs to include getter methods for the data you need, and a setProducer function
+# which sets the producer of the data type.  Then, write a python class that inherits from 
+# recoBase below.  Your class must override the function drawObjects to display it's data
+# on the views.  Your class is responsible for maintaining the items being drawn, and must 
+# clear them with the clearDrawnObjects function.  Store drawn objects in _drawnObjects.
+
+# Lastly, extend the drawableItems class with one line:
+# self._drawableClasses.update({'dataProduct':yourPythonClassName})
+# This gives the viewer the connection between the class you made and the product you want to draw
+
+# Beyond that, inside your larlite or python class you can do pretty much whatever you want
+# Run merging, matching, ertool, who cares.
+
+
+
+
+# This is the class that maintains the list of drawable items.
+# If your class isn't here, it can't be drawn
+import collections
+class drawableItems(object):
+  """This class exists to enumerate the drawableItems"""
+  # If you make a new drawing class, add it here
+  def __init__(self):
+    super(drawableItems,self).__init__()
+    # items are stored as pointers to the classes (not instances)
+    self._drawableClasses = collections.OrderedDict()
+    self._drawableClasses.update({'hit':hit})
+    self._drawableClasses.update({'cluster':cluster})
+
+  def getListOfItems(self):
+    return self._drawableClasses.keys()
+
+  def getDict(self):
+    return self._drawableClasses
+
 
 class dataBase(object):
   """basic class from which data objects inherit"""
@@ -35,34 +75,7 @@ class dataBase(object):
     self._producerName = name
 
 
-class wire(dataBase):
-  """docstring for wire"""
-  def __init__(self):
-    super(wire, self).__init__()
-    self._process = None
-    
-    # This is the (clunky) converter to native python
-    self._c2p = evd.Converter()
-
-  def get_img(self):
-    d = []
-    for i in range(0,self._nviews):
-      d.append(np.array(self._c2p.Convert(self._process.getDataByPlane(i))) )
-      # print "got a plane, here is a sample: ", d[i][0][0]
-    return d
-
-  def getPlane(self,plane):
-    return np.array(self._c2p.Convert(self._process.getDataByPlane(plane)))
-
-  def getWire(self, plane, wire):
-    return np.array(self._c2p.Convert(self._process.getWireData(plane,wire)))
-
-class recoWire(wire):
-  def __init__(self):
-    super(recoWire,self).__init__()
-    self._process = evd.DrawRaw()
-    self._process.initialize()
-
+# Reco base, all reco objects must inherit from this
 class recoBase(dataBase):
   """docstring for recoBase"""
   def __init__(self):
@@ -93,6 +106,42 @@ class recoBase(dataBase):
 
   def drawObjects(self,view_manager):
     pass
+
+
+
+
+
+
+
+
+class wire(dataBase):
+  """docstring for wire"""
+  def __init__(self):
+    super(wire, self).__init__()
+    self._process = None
+    
+    # This is the (clunky) converter to native python
+    self._c2p = evd.Converter()
+
+  def get_img(self):
+    d = []
+    for i in range(0,self._nviews):
+      d.append(np.array(self._c2p.Convert(self._process.getDataByPlane(i))) )
+      # print "got a plane, here is a sample: ", d[i][0][0]
+    return d
+
+  def getPlane(self,plane):
+    return np.array(self._c2p.Convert(self._process.getDataByPlane(plane)))
+
+  def getWire(self, plane, wire):
+    return np.array(self._c2p.Convert(self._process.getWireData(plane,wire)))
+
+class recoWire(wire):
+  def __init__(self):
+    super(recoWire,self).__init__()
+    self._process = evd.DrawRaw()
+    self._process.initialize()
+
 
 class hit(recoBase):
   """docstring for hit"""
@@ -265,19 +314,3 @@ class cluster(recoBase):
         cluster.clearHits(view_manager)
 
 
-import collections
-class drawableItems(object):
-  """This class exists to enumerate the drawableItems"""
-  # If you make a new drawing class, add it here
-  def __init__(self):
-    super(drawableItems,self).__init__()
-    # items are stored as pointers to the classes (not instances)
-    self._drawableClasses = collections.OrderedDict()
-    self._drawableClasses.update({'hit':hit})
-    self._drawableClasses.update({'cluster':cluster})
-
-  def getListOfItems(self):
-    return self._drawableClasses.keys()
-
-  def getDict(self):
-    return self._drawableClasses

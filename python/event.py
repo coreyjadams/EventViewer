@@ -107,7 +107,7 @@ class larlite_manager(manager,QtCore.QObject):
     self._process = fmwk.ana_processor()
     self._mgr = fmwk.storage_manager()
     self._drawableItems = drawableItems()
-
+    self._keyTable = dict()
     self._drawnClasses = dict()
 
     self.setInputFile(file)
@@ -227,8 +227,9 @@ class larlite_manager(manager,QtCore.QObject):
     # print "Received request to redraw ", product, " by ",producer
     # First, determine if there is a drawing process for this product:
     if producer == None:
-      self._drawnClasses[product].clearDrawnObjects(self._view_manager)
-      self._drawnClasses.pop(product)
+      if product in self._drawnClasses:
+        self._drawnClasses[product].clearDrawnObjects(self._view_manager)
+        self._drawnClasses.pop(product)
       return
     if product in self._drawnClasses:
       self._drawnClasses[product].setProducer(producer)
@@ -288,7 +289,7 @@ class larlite_manager(manager,QtCore.QObject):
   # handle all the wire stuff:
   def toggleWires(self, wiresBool):
     # Now, either add the drawing process or remove it:
-    if 'wires' not in self.getDrawableProducts():
+    if 'wire' not in self._keyTable:
       print "No wire data available to draw"
       return
     self._drawWires = wiresBool
