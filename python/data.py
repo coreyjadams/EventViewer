@@ -127,7 +127,7 @@ class wire(dataBase):
     d = []
     for i in range(0,self._nviews):
       d.append(np.array(self._c2p.Convert(self._process.getDataByPlane(i))) )
-      # print "got a plane, here is a sample: ", d[i][0][0]
+      print "got a plane, here is a sample: ", d[i][0][0]
     return d
 
   def getPlane(self,plane):

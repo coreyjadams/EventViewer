@@ -17,6 +17,7 @@ class lariat_manager(manager, wire, QtGui.QWidget):
 
     # override the wire drawing process for lariat
     self._process = evd.DrawLariatDaq(self._geom.tRange())
+    self._process.initialize()
 
     self.setInputFile(file)
 

@@ -20,4 +20,3 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 export PATH=$DIR/python:$PATH
 export PYTHONPATH=$DIR/python/:$PYTHONPATH
 
-alias lariatdaq.py="evd.py --daq -L"

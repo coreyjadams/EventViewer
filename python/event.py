@@ -14,7 +14,7 @@ import os
 # It needs to be extended independently for daq or reco viewing
 class event(object):
   """docstring for event"""
-  def __init__(self,):
+  def __init__(self):
     super(event, self).__init__()
     self._run = 0
     self._event = 0
@@ -90,8 +90,7 @@ class manager(event):
   def hasWireData(self):
     return False
 
-  def getPlane(self,plane):
-    pass
+
 
 
 class larlite_manager(manager,QtCore.QObject):

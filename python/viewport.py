@@ -9,10 +9,8 @@ class viewport(pg.GraphicsLayoutWidget):
     super(viewport, self).__init__()
     # add a view box, which is a widget that allows an image to be shown
     self._view = self.addViewBox(border=(0,0,0))
-    print self._view.viewRect()
     # add an image item which handles drawing (and refreshing) the image
     self._item = pg.ImageItem(useOpenGL=True)
-    print self._item.viewRect()
     # self._item._setPen((0,0,0))
     self._view.addItem(self._item)
     # connect the scene to click events, used to get wires
@@ -73,6 +71,13 @@ class viewport(pg.GraphicsLayoutWidget):
     self._upperLevel.setMaximumWidth(35)
     self._cmap.setMaximumWidth(25)
     self._lowerLevel.setMaximumWidth(35)
+
+  def restoreDefaults(self):
+    self._lowerLevel.setText(str(self._geometry.getLevels(self._plane)[0]))
+    self._upperLevel.setText(str(self._geometry.getLevels(self._plane)[1]))
+
+    self._cmap.restoreState(self._colorMapCollection)
+    # self._item.setLookupTable(self._cmap.getLookupTable(255))
 
   def getWidget(self):
 
