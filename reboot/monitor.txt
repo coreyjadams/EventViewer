@@ -1,1 +1,0 @@
-/media/cadams/data_linux/lariat_daq/dqm_run_005310_spill_0096.root
